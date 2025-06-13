@@ -5,7 +5,6 @@ import * as dotenv from "dotenv";
 import readline from "readline";
 
 import { CounterPage } from "./components/Counting.tsx";
-import type { ActivityTime } from "./common/types.tsx";
 
 
 
@@ -66,7 +65,7 @@ let time_on_site = 0;
 const init_time_on_site: number = Number.parseInt(await kv_db.get("time_on_site") || "0");
 
 
-const app = new Elysia().use(html()).listen(3000)
+const app = new Elysia().use(html())
   .get("/", () => {
     visits++;
     const visit_count = init_visit_count + visits;
@@ -74,17 +73,25 @@ const app = new Elysia().use(html()).listen(3000)
     return <CounterPage visits={visit_count} />;
   })
   .ws("/ws", {
-    message(ws, message) {
-      console.log("Received message:", message);
-      if (message && typeof message === 'object' && 'type' in message && message.type === 'ActivityTime') {
-        Bun.sleep(1)
-        time_on_site += 1
+    async message(ws, message) {
+      if (message && typeof message === 'object' && 'Activity_Time' in message) {
+        if (message.Activity_Time !== -1) {
+          await Bun.sleep(100)
+          time_on_site += 0.1
+
+        } else {
+          // Get ip address of the user
+          const clientIP = ws.remoteAddress
+          console.log("User connected from IP: ", clientIP)
+        }
         const total_time = init_time_on_site + time_on_site;
-        const msg: ActivityTime = { data: total_time};
+        const msg = {Activity_Time: total_time};
+
         ws.send(JSON.stringify(msg));
       }
     }
   })
+  .listen(3000)
 
 
 
