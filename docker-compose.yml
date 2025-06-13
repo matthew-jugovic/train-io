@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: train-io-db
+    restart: on-failure
+    env_file:
+      - secrets.env
+    ports:
+      - "4000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  postgres_data:
