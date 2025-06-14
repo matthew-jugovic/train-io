@@ -1,10 +1,7 @@
 import { Html } from '@elysiajs/html'
+import type { ActivityMessage } from '../common/ActivityMessage.tsx';
 
-interface ActivityMessage {
-  Activity_Time: number;
-}
-
-function initializeWebSocket(): void {
+function initializeClient(): void {
   const ws = new WebSocket("ws://localhost:3000/ws");
   
   ws.onopen = () => {
@@ -18,11 +15,12 @@ function initializeWebSocket(): void {
   };
 
   ws.onmessage = (event) => {
-    const element = document.getElementById("activity_time");
-    if (event.data && element) {
+    
+    if (event.data) {      
       try {
+        const element = document.getElementById("activity_time");
         const receivedData: ActivityMessage = JSON.parse(event.data);
-        if (receivedData.Activity_Time !== undefined) {
+        if (receivedData.Activity_Time !== undefined && element) {
           const activityTime = receivedData.Activity_Time;
           element.innerText = `People have spent a total of ${activityTime.toFixed(1)} seconds on this website!`;
 
@@ -35,11 +33,29 @@ function initializeWebSocket(): void {
     }
   };
 
-  ws.onclose = () => {
+  ws.onclose = async () => {
     const statusElement = document.getElementById("activity_status");
     if (statusElement) {
       statusElement.innerText = "Disconnected";
     }
+
+    // Attempt to reconnect.
+    console.log("Attempting to reconnect...");
+    while (true) {
+      try {
+        const new_ws = new WebSocket("ws://localhost:3000/ws");
+        new_ws.onopen = () => {
+          window.location.reload()
+          return
+        }
+
+      }
+      catch (_) {
+        
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
   };
 
   ws.onerror = (error) => {
@@ -57,10 +73,11 @@ export function CounterPage({ visits }: { visits: number }) {
       <body>
         <h1>Welcome to the Counter Page!</h1>
         <p>This page has been visited {visits} times!</p>
-        <p id="activity_status">...</p>        <p id="activity_time">...</p>
+        <p id="activity_status">...</p>
+        <p id="activity_time">...</p>
         
         <script type="text/javascript">
-          {`(${initializeWebSocket.toString()})()`}
+          {`(${initializeClient.toString()})()`}
         </script>
       </body>
     </html>

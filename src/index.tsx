@@ -5,6 +5,7 @@ import * as dotenv from "dotenv";
 import readline from "readline";
 
 import { CounterPage } from "./components/Counting.tsx";
+import type { ActivityMessage } from './common/ActivityMessage.tsx';
 
 
 
@@ -67,7 +68,7 @@ const init_time_on_site: number = Number.parseInt(await kv_db.get("time_on_site"
 
 const app = new Elysia().use(html())
   .get("/", () => {
-    visits++;
+    
     const visit_count = init_visit_count + visits;
   
     return <CounterPage visits={visit_count} />;
@@ -75,21 +76,28 @@ const app = new Elysia().use(html())
   .ws("/ws", {
     async message(ws, message) {
       if (message && typeof message === 'object' && 'Activity_Time' in message) {
-        if (message.Activity_Time !== -1) {
+        if (message.Activity_Time !== -1) { // -1 is the initial message from the client, we don't count that
+
           await Bun.sleep(100)
           time_on_site += 0.1
 
         } else {
           // Get ip address of the user
+          visits++;
           const clientIP = ws.remoteAddress
           console.log("User connected from IP: ", clientIP)
         }
         const total_time = init_time_on_site + time_on_site;
-        const msg = {Activity_Time: total_time};
+        const msg: ActivityMessage = {Activity_Time: total_time};
 
         ws.send(JSON.stringify(msg));
       }
+    },
+
+    close(ws) {
+      console.log("User disconnected from IP: ", ws.remoteAddress)
     }
+
   })
   .listen(3000)
 
