@@ -1,10 +1,5 @@
-# Elysia with Bun runtime
-
-## Getting Started
-To get started with this template, simply paste this command into your terminal:
-```bash
-bun create elysia ./elysia-example
-```
+# Multiplayer Integration
+We are using ElysiaJS for the backend, Bun for the runtime, PostgreSQL for the database with Docker, and React for the frontend.
 
 ## Development
 To start the development server run:
