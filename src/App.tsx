@@ -2,6 +2,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useRef, useEffect, useState, Suspense } from "react";
 import { DoubleSide, Mesh, RepeatWrapping, Vector3 } from "three";
 import { OrbitControls, useTexture } from "@react-three/drei";
+import { GUI } from "lil-gui"
 import {
   useRandomlyGeneratedPositions,
   type Range,
@@ -12,12 +13,19 @@ import {
   quat,
   RapierRigidBody,
   RigidBody,
+  useSphericalJoint,
   vec3,
   type RigidBodyProps,
 } from "@react-three/rapier";
 
+const CONSTANTS = {
+  speed: 4000,
+  turn_speed: 10,
+  lerp_speed: 0.001
+}
+
 function useKeyControls() {
-  const [keys, setKeys] = useState({ w: false, a: false, d: false });
+  const [keys, setKeys] = useState({ w: false, a: false, s: false, d: false });
   useEffect(() => {
     function down(e: { key: PropertyKey }) {
       if (keys.hasOwnProperty(e.key)) setKeys((k) => ({ ...k, [e.key]: true }));
@@ -38,35 +46,65 @@ function useKeyControls() {
 
 function Train() {
   const trainRef = useRef<RapierRigidBody>(null);
-  const { w, a, d } = useKeyControls();
+  const trainCartRef = useRef<RapierRigidBody>(null)
+
+  const trainCartRef2 = useRef<RapierRigidBody>(null)
+  const trainCartRef3 = useRef<RapierRigidBody>(null)
+  const trainCartRef4 = useRef<RapierRigidBody>(null)
+
+  
+
+
+  const { w, a, s, d } = useKeyControls();
   const { camera } = useThree();
 
   useFrame((_, delta) => {
     if (!trainRef.current) return;
-    const speed = 400;
-    const turnSpeed = 10;
+    
 
     if (w) {
       // trainRef.current.translateZ(-speed * delta);
       //trainRef.current.applyImpulse({ x: 0, y: 0, z: -speed * delta }, true);
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(quat(trainRef.current.rotation()));
-      forward.multiplyScalar(speed * delta);
+      forward.multiplyScalar(CONSTANTS.speed * delta);
       trainRef.current.applyImpulse(forward, true);
+
+      const magCurrentSpeed = Math.sqrt( trainRef.current.linvel().x ** 2 + trainRef.current.linvel().y ** 2 + trainRef.current.linvel().z ** 2 )
+      const magForwardMaxSpeed = Math.sqrt( forward.x ** 2 + forward.y ** 2 + forward.z ** 2 )
+
+      console.log(`my speed of my car is ${magCurrentSpeed}\nmy max speed is ${magForwardMaxSpeed}`)
+
+      if ( magCurrentSpeed > magForwardMaxSpeed) {
+        trainRef.current.setLinvel(forward, true)
+      }
     }
     if (a) {
       // trainRef.current.rotation.y += turnSpeed;
-      trainRef.current.applyTorqueImpulse({ x: 0, y: turnSpeed, z: 0 }, true);
-      if (trainRef.current.angvel().y > turnSpeed) {
-        trainRef.current.setAngvel({ x: 0, y: turnSpeed, z: 0 }, true)
+      trainRef.current.applyTorqueImpulse({ x: 0, y: CONSTANTS.turn_speed, z: 0 }, true);
+      if (trainRef.current.angvel().y > CONSTANTS.turn_speed) {
+        trainRef.current.setAngvel({ x: 0, y: CONSTANTS.turn_speed, z: 0 }, true)
       }
       
     }
+    if (s) {
+      trainRef.current.setLinvel(vec3(trainRef.current.linvel()).multiplyScalar(0.95) , true)
+    }
+
+    // Move forward based on train current rotation.
+    const forward = new Vector3(0, 0, -1);
+    forward.applyQuaternion(quat(trainRef.current.rotation()));
+    forward.multiplyScalar(CONSTANTS.speed * delta);
+
+
+    const newvel = vec3(trainRef.current.linvel()).lerp(forward, CONSTANTS.lerp_speed)
+    trainRef.current.setLinvel(newvel, true)
+
     if (d) {
       // trainRef.current.rotation.y -= turnSpeed;
-      trainRef.current.applyTorqueImpulse({ x: 0, y: -turnSpeed, z: 0 }, true);
-      if (trainRef.current.angvel().y < -turnSpeed) {
-        trainRef.current.setAngvel({ x: 0, y: -turnSpeed, z: 0 }, true)
+      trainRef.current.applyTorqueImpulse({ x: 0, y: -CONSTANTS.turn_speed, z: 0 }, true);
+      if (trainRef.current.angvel().y < -CONSTANTS.turn_speed) {
+        trainRef.current.setAngvel({ x: 0, y: -CONSTANTS.turn_speed, z: 0 }, true)
       }
 
     }
@@ -75,7 +113,72 @@ function Train() {
     camera.lookAt(trainPos);
   });
 
+  useSphericalJoint(trainRef, trainCartRef, 
+    [[0.,0.75,3.5],[0.,0.75,-3.5]]
+  )
+
+  useSphericalJoint(trainCartRef, trainCartRef2, 
+    [[0.,0.75,3.5],[0.,0.75,-3.5]]
+  )
+
+  useSphericalJoint(trainCartRef2, trainCartRef3, 
+    [[0.,0.75,3.5],[0.,0.75,-3.5]]
+  )
+  useSphericalJoint(trainCartRef3, trainCartRef4, 
+    [[0.,0.75,3.5],[0.,0.75,-3.5]]
+  )
+
+
+
   return (
+    <group>
+    <RigidBody
+      ref={trainCartRef}
+      onCollisionEnter={() => {
+        console.log("Collision");
+      }}
+    >
+      <mesh position={[0, 1, 0]} castShadow>
+        <boxGeometry args={[1.5, 1.5, 5]} />
+        <meshStandardMaterial color="blue" />
+      </mesh>
+    </RigidBody>
+    <RigidBody
+      ref={trainCartRef2}
+      onCollisionEnter={() => {
+        console.log("Collision");
+      }}
+    >
+      <mesh position={[0, 1, 0]} castShadow>
+        <boxGeometry args={[1.5, 1.5, 5]} />
+        <meshStandardMaterial color="blue" />
+      </mesh>
+    </RigidBody>
+    <RigidBody
+      ref={trainCartRef3}
+      onCollisionEnter={() => {
+        console.log("Collision");
+      }}
+    >
+      <mesh position={[0, 1, 0]} castShadow>
+        <boxGeometry args={[1.5, 1.5, 5]} />
+        <meshStandardMaterial color="blue" />
+      </mesh>
+    </RigidBody>
+    <RigidBody
+      ref={trainCartRef4}
+      onCollisionEnter={() => {
+        console.log("Collision");
+      }}
+    >
+      <mesh position={[0, 1, 0]} castShadow>
+        <boxGeometry args={[1.5, 1.5, 5]} />
+        <meshStandardMaterial color="blue" />
+      </mesh>
+    </RigidBody>
+
+    
+    
     <RigidBody
       ref={trainRef}
       onCollisionEnter={() => {
@@ -87,6 +190,7 @@ function Train() {
         <meshStandardMaterial color="blue" />
       </mesh>
     </RigidBody>
+  </group>
   );
 }
 
@@ -122,6 +226,19 @@ function App() {
   useEffect(() => {
     generatePositions();
   }, [generatePositions]);
+
+  useEffect( () => {
+    const gui = new GUI()
+    gui.add(CONSTANTS, "speed", 0, 10000, 1)
+    gui.add(CONSTANTS, "turn_speed", 0, 100, 1)
+    gui.add(CONSTANTS, "lerp_speed", 0, 0.1, 0.00001)
+    
+    
+    return () => {
+      gui.destroy()
+    }
+
+  }, [])
 
   return (
     <div id="canvas-container">
