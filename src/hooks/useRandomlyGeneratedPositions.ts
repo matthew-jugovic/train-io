@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { type XYZ } from "../types/XYZ";
 
 export type Range = [number, number];
@@ -40,11 +40,11 @@ export const useRandomlyGeneratedPositions = ({
 }: GenerationProps) => {
   const [generatedPositions, setGeneratedPositions] = useState<XYZ[]>([]);
 
-  const generatePositions = () => {
+  const generatePositions = useCallback(() => {
     setGeneratedPositions(
       generateRandomPositions({ numPositions, xRange, yRange, zRange })
     );
-  };
+  }, [numPositions, xRange, yRange, zRange])
 
   return { generatedPositions, generatePositions };
 };

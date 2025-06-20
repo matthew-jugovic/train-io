@@ -57,10 +57,18 @@ function Train() {
     if (a) {
       // trainRef.current.rotation.y += turnSpeed;
       trainRef.current.applyTorqueImpulse({ x: 0, y: turnSpeed, z: 0 }, true);
+      if (trainRef.current.angvel().y > turnSpeed) {
+        trainRef.current.setAngvel({ x: 0, y: turnSpeed, z: 0 }, true)
+      }
+      
     }
     if (d) {
       // trainRef.current.rotation.y -= turnSpeed;
       trainRef.current.applyTorqueImpulse({ x: 0, y: -turnSpeed, z: 0 }, true);
+      if (trainRef.current.angvel().y < -turnSpeed) {
+        trainRef.current.setAngvel({ x: 0, y: -turnSpeed, z: 0 }, true)
+      }
+
     }
     const trainPos = vec3(trainRef.current.translation());
     camera.position.set(trainPos.x + 5, trainPos.y + 30, trainPos.z);
@@ -113,7 +121,7 @@ function App() {
 
   useEffect(() => {
     generatePositions();
-  }, []);
+  }, [generatePositions]);
 
   return (
     <div id="canvas-container">
