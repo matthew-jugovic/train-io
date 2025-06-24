@@ -21,8 +21,8 @@ import {
 import TrainWhistleController from "./components/TrainWhistleController";
 
 const CONSTANTS = {
-  speed: 4000,
-  turn_speed: 10,
+  speed: 200,
+  turn_speed: 2,
   lerp_speed: 0.001,
 };
 
@@ -49,13 +49,14 @@ function useKeyControls() {
 function Train() {
   const blueCartRef = useRef<RapierRigidBody>(null);
   const redCartRef = useRef<RapierRigidBody>(null);
+  const greenCartRef = useRef<RapierRigidBody>(null); // New cart
 
   const [isMoving, setIsMoving] = useState(false);
 
   const { w, a, s, d } = useKeyControls();
   const { camera } = useThree();
 
-  const cartLength = 6; // fix
+  const cartLength = 6;
   const gap = 2;
   const spacing = cartLength + gap;
 
@@ -79,6 +80,12 @@ function Train() {
           true
         );
       }
+      if (greenCartRef.current) {
+        greenCartRef.current.applyTorqueImpulse(
+          { x: 0, y: CONSTANTS.turn_speed, z: 0 },
+          true
+        );
+      }
     }
     if (s) {
       blueCartRef.current.setLinvel(
@@ -93,6 +100,12 @@ function Train() {
       );
       if (redCartRef.current) {
         redCartRef.current.applyTorqueImpulse(
+          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+          true
+        );
+      }
+      if (greenCartRef.current) {
+        greenCartRef.current.applyTorqueImpulse(
           { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
           true
         );
@@ -115,25 +128,37 @@ function Train() {
 
   // Attach the red cart's back (with gap) to the blue cart's front
   useSphericalJoint(blueCartRef, redCartRef, [
-    [0, 0.75, cartLength / 2], // front of blue cart (visual front)
+    [0, 0.75, cartLength / 2], // front of blue cart
     [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
+  ]);
+  // Attach the green cart's back (with gap) to the red cart's front
+  useSphericalJoint(redCartRef, greenCartRef, [
+    [0, 0.75, cartLength / 2], // front of red cart
+    [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
   ]);
 
   return (
     <>
       <group>
-        {/* Blue cart (engine, controlled by "w") */}
+        {/* Blue cart (engine) */}
         <RigidBody ref={blueCartRef} mass={10} position={[0, 0, 0]}>
           <mesh position={[0, 0.75, 0]} castShadow>
             <boxGeometry args={[1.5, 1.5, cartLength]} />
             <meshStandardMaterial color="blue" />
           </mesh>
         </RigidBody>
-        {/* Red cart, in front of blue cart, spaced by gap */}
+        {/* Red cart, in front of blue cart */}
         <RigidBody ref={redCartRef} mass={5} position={[0, 0, spacing]}>
           <mesh position={[0, 0.75, 0]} castShadow>
             <boxGeometry args={[1.5, 1.5, cartLength]} />
             <meshStandardMaterial color="red" />
+          </mesh>
+        </RigidBody>
+        {/* Green cart, in front of red cart */}
+        <RigidBody ref={greenCartRef} mass={5} position={[0, 0, spacing * 2]}>
+          <mesh position={[0, 0.75, 0]} castShadow>
+            <boxGeometry args={[1.5, 1.5, cartLength]} />
+            <meshStandardMaterial color="green" />
           </mesh>
         </RigidBody>
       </group>
