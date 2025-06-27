@@ -44,7 +44,7 @@ function App() {
     <div id="canvas-container">
       <Canvas camera={{ position: [0, 18, 5] }} shadows>
         <Suspense>
-          <Physics colliders="cuboid" debug>
+          <Physics colliders="cuboid" /*debug */>
             {generatedPositions.map((pos, index) => (
               <Railcar
                 key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
@@ -55,13 +55,14 @@ function App() {
             <gridHelper args={[20]} />
             <Train />
             <Ground textureUrl={"/grassTexture.jpg"} />
-            <ambientLight intensity={0.2} color="white" />
-            <directionalLight position={[2, 2, 1]}>
-              <orthographicCamera
-                attach="shadow-camera"
-                args={[-5, 5, 5, -5]}
-              />
-            </directionalLight>
+            <ambientLight intensity={0.3} color="white" />
+            <directionalLight
+              castShadow
+              position={[10, 10, 10]}
+              intensity={1.5}
+              shadow-mapSize-width={1024}
+              shadow-mapSize-height={1024}
+            />
           </Physics>
         </Suspense>
       </Canvas>

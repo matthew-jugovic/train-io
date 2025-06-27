@@ -11,6 +11,20 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useRef, useState } from "react";
 import useKeyControls from "../hooks/useKeyControls";
 import CONSTANTS from "../constants/trainConstants";
+import { useLoader } from "@react-three/fiber";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+function TrainModel() {
+  const trainModel = useLoader(GLTFLoader, "/train/train.gltf");
+  return (
+    <primitive
+      object={trainModel.scene}
+      scale={0.008}
+      position={[0, 0, 0]}
+      rotation={[0, Math.PI, 0]}
+    />
+  );
+}
 
 function Train() {
   const trainRef = useRef<RapierRigidBody>(null);
@@ -23,7 +37,6 @@ function Train() {
 
   useFrame((_, delta) => {
     if (!trainRef.current) return;
-
     if (w) {
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(quat(trainRef.current.rotation()));
@@ -59,6 +72,18 @@ function Train() {
         );
       }
     }
+    if (d) {
+      trainRef.current.applyTorqueImpulse(
+        { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+        true
+      );
+      if (trainRef.current.angvel().y < -CONSTANTS.turn_speed) {
+        trainRef.current.setAngvel(
+          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+          true
+        );
+      }
+    }
     if (s) {
       trainRef.current.setLinvel(
         vec3(trainRef.current.linvel()).multiplyScalar(0.95),
@@ -77,19 +102,11 @@ function Train() {
     );
     trainRef.current.setLinvel(newvel, true);
 
-    if (d) {
-      trainRef.current.applyTorqueImpulse(
-        { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
-        true
-      );
-      if (trainRef.current.angvel().y < -CONSTANTS.turn_speed) {
-        trainRef.current.setAngvel(
-          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
-          true
-        );
-      }
-    }
-
+    // lock rotation to stop train flipping
+    trainRef.current.setAngvel(
+      { x: 0, y: trainRef.current.angvel().y, z: 0 },
+      true
+    );
     // used to know when to play sound when moving or not
     const velocity = trainRef.current.linvel();
     const speed = Math.sqrt(
@@ -101,7 +118,7 @@ function Train() {
     }
 
     const trainPos = vec3(trainRef.current.translation());
-    camera.position.set(trainPos.x + 5, trainPos.y + 30, trainPos.z);
+    camera.position.set(trainPos.x + 15, trainPos.y + 30, trainPos.z);
     camera.lookAt(trainPos);
   });
 
@@ -130,11 +147,9 @@ function Train() {
           onCollisionEnter={() => {
             console.log("Collision");
           }}
+          colliders="hull"
         >
-          <mesh position={[0, 1, 0]} castShadow>
-            <boxGeometry args={[1.5, 1.5, 5]} />
-            <meshStandardMaterial color="blue" />
-          </mesh>
+          <TrainModel />
         </RigidBody>
       </group>
 
