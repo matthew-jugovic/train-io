@@ -28,58 +28,40 @@ function TrainModel() {
 
 function Train() {
   const trainRef = useRef<RapierRigidBody>(null);
-  const trainCartRef = useRef<RapierRigidBody>(null);
+  const redCartRef = useRef<RapierRigidBody>(null);
+  const greenCartRef = useRef<RapierRigidBody>(null); // New cart
 
-  // added state to create sound when train is moving:
   const [isMoving, setIsMoving] = useState(false);
+
   const { w, a, s, d } = useKeyControls();
   const { camera } = useThree();
 
+  const cartLength = 6;
+  const gap = 2;
+  const spacing = cartLength + gap;
   useFrame((_, delta) => {
     if (!trainRef.current) return;
+
     if (w) {
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(quat(trainRef.current.rotation()));
       forward.multiplyScalar(CONSTANTS.speed * delta);
       trainRef.current.applyImpulse(forward, true);
-
-      const magCurrentSpeed = Math.sqrt(
-        trainRef.current.linvel().x ** 2 +
-          trainRef.current.linvel().y ** 2 +
-          trainRef.current.linvel().z ** 2
-      );
-      const magForwardMaxSpeed = Math.sqrt(
-        forward.x ** 2 + forward.y ** 2 + forward.z ** 2
-      );
-
-      console.log(
-        `my speed of my car is ${magCurrentSpeed}\nmy max speed is ${magForwardMaxSpeed}`
-      );
-
-      if (magCurrentSpeed > magForwardMaxSpeed) {
-        trainRef.current.setLinvel(forward, true);
-      }
     }
     if (a) {
       trainRef.current.applyTorqueImpulse(
         { x: 0, y: CONSTANTS.turn_speed, z: 0 },
         true
       );
-      if (trainRef.current.angvel().y > CONSTANTS.turn_speed) {
-        trainRef.current.setAngvel(
+      if (redCartRef.current) {
+        redCartRef.current.applyTorqueImpulse(
           { x: 0, y: CONSTANTS.turn_speed, z: 0 },
           true
         );
       }
-    }
-    if (d) {
-      trainRef.current.applyTorqueImpulse(
-        { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
-        true
-      );
-      if (trainRef.current.angvel().y < -CONSTANTS.turn_speed) {
-        trainRef.current.setAngvel(
-          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+      if (greenCartRef.current) {
+        greenCartRef.current.applyTorqueImpulse(
+          { x: 0, y: CONSTANTS.turn_speed, z: 0 },
           true
         );
       }
@@ -90,24 +72,31 @@ function Train() {
         true
       );
     }
-
-    // Move forward based on train current rotation.
-    const forward = new Vector3(0, 0, -1);
-    forward.applyQuaternion(quat(trainRef.current.rotation()));
-    forward.multiplyScalar(CONSTANTS.speed * delta);
-
-    const newvel = vec3(trainRef.current.linvel()).lerp(
-      forward,
-      CONSTANTS.lerp_speed
-    );
-    trainRef.current.setLinvel(newvel, true);
+    if (d) {
+      trainRef.current.applyTorqueImpulse(
+        { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+        true
+      );
+      if (redCartRef.current) {
+        redCartRef.current.applyTorqueImpulse(
+          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+          true
+        );
+      }
+      if (greenCartRef.current) {
+        greenCartRef.current.applyTorqueImpulse(
+          { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+          true
+        );
+      }
+    }
 
     // lock rotation to stop train flipping
     trainRef.current.setAngvel(
       { x: 0, y: trainRef.current.angvel().y, z: 0 },
       true
     );
-    // used to know when to play sound when moving or not
+
     const velocity = trainRef.current.linvel();
     const speed = Math.sqrt(
       velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
@@ -117,32 +106,28 @@ function Train() {
       setIsMoving(currentlyMoving);
     }
 
-    const trainPos = vec3(trainRef.current.translation());
-    camera.position.set(trainPos.x + 15, trainPos.y + 30, trainPos.z);
-    camera.lookAt(trainPos);
+    const blueCartPos = vec3(trainRef.current.translation());
+    camera.position.set(blueCartPos.x + 15, blueCartPos.y + 30, blueCartPos.z);
+    camera.lookAt(blueCartPos);
   });
 
-  useSphericalJoint(trainRef, trainCartRef, [
-    [0, 0.75, 3.5],
-    [0, 0.75, -3.5],
+  // Attach the red cart's back (with gap) to the blue cart's front
+  useSphericalJoint(trainRef, redCartRef, [
+    [0, 0.75, cartLength / 2], // front of blue cart
+    [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
+  ]);
+  // Attach the green cart's back (with gap) to the red cart's front
+  useSphericalJoint(redCartRef, greenCartRef, [
+    [0, 0.75, cartLength / 2], // front of red cart
+    [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
   ]);
 
   return (
     <>
       <group>
+        {/* Train (engine) */}
         <RigidBody
-          ref={trainCartRef}
-          onCollisionEnter={() => {
-            console.log("Collision");
-          }}
-        >
-          <mesh position={[0, 1, 0]} castShadow>
-            <boxGeometry args={[1.5, 1.5, 5]} />
-            <meshStandardMaterial color="blue" />
-          </mesh>
-        </RigidBody>
-
-        <RigidBody
+          linearDamping={1}
           ref={trainRef}
           onCollisionEnter={() => {
             console.log("Collision");
@@ -151,9 +136,31 @@ function Train() {
         >
           <TrainModel />
         </RigidBody>
+        {/* Red cart, in front of blue cart */}
+        <RigidBody
+          ref={redCartRef}
+          mass={5}
+          position={[0, 0, spacing]}
+          linearDamping={1}
+        >
+          <mesh position={[0, 0.75, 0]} castShadow>
+            <boxGeometry args={[1.5, 1.5, cartLength]} />
+            <meshStandardMaterial color="red" />
+          </mesh>
+        </RigidBody>
+        {/* Green cart, in front of red cart */}
+        <RigidBody
+          ref={greenCartRef}
+          mass={5}
+          position={[0, 0, spacing * 2]}
+          linearDamping={1}
+        >
+          <mesh position={[0, 0.75, 0]} castShadow>
+            <boxGeometry args={[1.5, 1.5, cartLength]} />
+            <meshStandardMaterial color="green" />
+          </mesh>
+        </RigidBody>
       </group>
-
-      {/*THE WHISTLE CONTROLLER  */}
       <TrainWhistleController moving={isMoving} />
     </>
   );
