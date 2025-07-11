@@ -13,6 +13,7 @@ import useKeyControls from "../hooks/useKeyControls";
 import CONSTANTS from "../constants/trainConstants";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import Joint from "./Joint";
 
 function TrainModel() {
   const trainModel = useLoader(GLTFLoader, "/train/train.gltf");
@@ -111,16 +112,16 @@ function Train() {
     camera.lookAt(blueCartPos);
   });
 
-  // Attach the red cart's back (with gap) to the blue cart's front
-  useSphericalJoint(trainRef, redCartRef, [
-    [0, 0.75, cartLength / 2], // front of blue cart
-    [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
-  ]);
-  // Attach the green cart's back (with gap) to the red cart's front
-  useSphericalJoint(redCartRef, greenCartRef, [
-    [0, 0.75, cartLength / 2], // front of red cart
-    [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
-  ]);
+  // // Attach the red cart's back (with gap) to the blue cart's front
+  // useSphericalJoint(trainRef, redCartRef, [
+  //   [0, 0.75, cartLength / 2], // front of blue cart
+  //   [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
+  // ]);
+  // // Attach the green cart's back (with gap) to the red cart's front
+  // useSphericalJoint(redCartRef, greenCartRef, [
+  //   [0, 0.75, cartLength / 2], // front of red cart
+  //   [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
+  // ]);
 
   return (
     <>
@@ -160,6 +161,9 @@ function Train() {
             <meshStandardMaterial color="green" />
           </mesh>
         </RigidBody>
+        {/* Joints */}
+        <Joint carRef1={trainRef} carRef2={redCartRef} />
+        <Joint carRef1={redCartRef} carRef2={greenCartRef} />
       </group>
       <TrainWhistleController moving={isMoving} />
     </>
