@@ -9,8 +9,8 @@ import type { RefObject } from "react";
 const cartLength = 6;
 const gap = 2;
 type JointProps = {
-  carRef1: RefObject<RapierRigidBody>;
-  carRef2: RefObject<RapierRigidBody>;
+  carRef1: RefObject<RapierRigidBody | null>;
+  carRef2: RefObject<RapierRigidBody | null>;
 };
 export default function Joint({ carRef1, carRef2 }: JointProps) {
   useSphericalJoint(carRef1, carRef2, [
