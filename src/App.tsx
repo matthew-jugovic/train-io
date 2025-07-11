@@ -28,7 +28,7 @@ function App() {
 
   const { generatedPositions, generatePositions } =
     useRandomlyGeneratedPositions({
-      numPositions: 300,
+      numPositions: 100,
       xRange: X_RANGE,
       yRange: Y_RANGE,
       zRange: Z_RANGE,
@@ -63,13 +63,12 @@ function App() {
       <UI coalCollected={coalCollected} />
       <Canvas camera={{ position: [0, 18, 5] }} shadows>
         <Suspense>
-          <Physics colliders="cuboid" debug>
+          <Physics colliders="cuboid" debug={false}>
             a
             {generatedPositions.map((pos, index) => (
               <Railcar
                 key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
                 position={pos}
-                dimensions={[1.5, 1.5, 4]}
               />
             ))}
             {coalPositions.generatedPositions.map((pos, index) => (

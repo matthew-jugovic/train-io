@@ -1,10 +1,10 @@
 import "./UI.css";
 
-type Props = {
+type UIProps = {
   coalCollected: number;
 };
 
-export default function UI({ coalCollected }: Props) {
+export default function UI({ coalCollected }: UIProps) {
   return (
     <div className="UI">
       <div>Coal Collected: {coalCollected}</div>

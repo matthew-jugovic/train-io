@@ -14,6 +14,7 @@ import useKeyControls from "../hooks/useKeyControls";
 import CONSTANTS from "../constants/trainConstants";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import Railcar from "./Railcar";
 
 function TrainModel() {
   const trainModel = useLoader(GLTFLoader, "/train/train.gltf");
@@ -30,7 +31,7 @@ function TrainModel() {
 function Train() {
   const trainRef = useRef<RapierRigidBody>(null);
   const redCartRef = useRef<RapierRigidBody>(null);
-  const greenCartRef = useRef<RapierRigidBody>(null); // New cart
+  const greenCartRef = useRef<RapierRigidBody>(null);
 
   const [isMoving, setIsMoving] = useState(false);
 
@@ -38,10 +39,11 @@ function Train() {
   const { camera } = useThree();
 
   const cartLength = 6;
-  const gap = 2;
+  const gap = 1.75;
   const spacing = cartLength + gap;
   useFrame((_, delta) => {
-    if (!trainRef.current) return;
+    if (!trainRef.current || !redCartRef.current || !greenCartRef.current)
+      return;
 
     if (w) {
       const forward = new Vector3(0, 0, -1);
@@ -98,6 +100,16 @@ function Train() {
       true
     );
 
+    redCartRef.current.setAngvel(
+      { x: 0, y: trainRef.current.angvel().y, z: 0 },
+      true
+    );
+
+    greenCartRef.current.setAngvel(
+      { x: 0, y: trainRef.current.angvel().y, z: 0 },
+      true
+    );
+
     const velocity = trainRef.current.linvel();
     const speed = Math.sqrt(
       velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
@@ -113,15 +125,14 @@ function Train() {
   });
 
   // Attach the red cart's back (with gap) to the blue cart's front
-
-  useSphericalJoint(trainRef, redCartRef!, [
-    [0, 0.75, cartLength / 2], // front of blue cart
-    [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
+  useSphericalJoint(trainRef, redCartRef, [
+    [0, 0.5, cartLength / 2], // front of blue cart
+    [0, -0.5, -cartLength / 2 - gap], // back of red cart, offset by gap
   ]);
   // Attach the green cart's back (with gap) to the red cart's front
   useSphericalJoint(redCartRef, greenCartRef, [
-    [0, 0.75, cartLength / 2], // front of red cart
-    [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
+    [0, -0.5, cartLength / 2], // front of red cart
+    [0, -0.5, -cartLength / 2 - gap], // back of green cart, offset by gap
   ]);
 
   return (
@@ -139,30 +150,20 @@ function Train() {
         >
           <TrainModel />
         </RigidBody>
-        {/* Red cart, in front of blue cart */}
-        <RigidBody
-          ref={redCartRef}
-          mass={5}
-          position={[0, 0, spacing]}
+        {/* Red cart*/}
+        <Railcar
+          refProp={redCartRef}
+          position={[0, 1, spacing]}
+          color="red"
           linearDamping={1}
-        >
-          <mesh position={[0, 0.75, 0]} castShadow>
-            <boxGeometry args={[1.5, 1.5, cartLength]} />
-            <meshStandardMaterial color="red" />
-          </mesh>
-        </RigidBody>
-        {/* Green cart, in front of red cart */}
-        <RigidBody
-          ref={greenCartRef}
-          mass={5}
-          position={[0, 0, spacing * 2]}
+        />
+        {/* Green cart*/}
+        <Railcar
+          refProp={greenCartRef}
+          position={[0, 1, spacing * 2]}
+          color="green"
           linearDamping={1}
-        >
-          <mesh position={[0, 0.75, 0]} castShadow>
-            <boxGeometry args={[1.5, 1.5, cartLength]} />
-            <meshStandardMaterial color="green" />
-          </mesh>
-        </RigidBody>
+        />
       </group>
       <TrainWhistleController moving={isMoving} />
     </>
