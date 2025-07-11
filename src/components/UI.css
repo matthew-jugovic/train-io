@@ -1,0 +1,32 @@
+.UI {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 16px;
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: sans-serif;
+  width: 220px;
+  z-index: 10;
+}
+
+.UI label {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 0.9em;
+}
+
+.UI button {
+  width: 100%;
+  padding: 6px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.UI button:hover {
+  background: #45a049;
+}

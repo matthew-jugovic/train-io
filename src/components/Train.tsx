@@ -1,4 +1,5 @@
 import {
+  interactionGroups,
   quat,
   RapierRigidBody,
   RigidBody,
@@ -112,7 +113,8 @@ function Train() {
   });
 
   // Attach the red cart's back (with gap) to the blue cart's front
-  useSphericalJoint(trainRef, redCartRef, [
+
+  useSphericalJoint(trainRef, redCartRef!, [
     [0, 0.75, cartLength / 2], // front of blue cart
     [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
   ]);
@@ -127,6 +129,7 @@ function Train() {
       <group>
         {/* Train (engine) */}
         <RigidBody
+          name="train"
           linearDamping={1}
           ref={trainRef}
           onCollisionEnter={() => {

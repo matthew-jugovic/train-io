@@ -11,7 +11,7 @@ type RailcarProps = {
 const Railcar: FC<RailcarProps> = ({ position, dimensions, color }) => {
   return (
     <RigidBody position={position}>
-      <mesh position={position}>
+      <mesh>
         <boxGeometry args={dimensions} />
         <meshStandardMaterial color={color} />
       </mesh>
