@@ -14,6 +14,7 @@ import CONSTANTS from "./constants/trainConstants";
 import { Physics } from "@react-three/rapier";
 import UI from "./components/UI";
 import Coal from "./components/Coal";
+import { TrainProvider } from "./contexts/trainContext";
 
 const X_RANGE: Range = [-250, 250];
 const Y_RANGE: Range = [1, 1];
@@ -67,6 +68,7 @@ function App() {
             a
             {generatedPositions.map((pos, index) => (
               <Railcar
+                uid="3"
                 key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
                 position={pos}
               />
@@ -80,7 +82,9 @@ function App() {
                 onCollect={handleCoalCollected}
               />
             ))}
-            <Train />
+            <TrainProvider>
+              <Train />
+            </TrainProvider>
             <Ground textureUrl={"/grassTexture.jpg"} />
             <ambientLight intensity={0.3} color="white" />
             <directionalLight
