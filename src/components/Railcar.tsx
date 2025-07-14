@@ -7,20 +7,17 @@ import {
 } from "@react-three/rapier";
 import { useLoader } from "@react-three/fiber";
 import { useContext, useEffect, useMemo, useRef } from "react";
-import { GLTFLoader } from "three/examples/jsm/Addons.js";
-import { Mesh } from "three";
 import { TrainContext } from "../contexts/trainContext";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 type RailcarProps = {
   position: XYZ;
-  color?: string;
   refProp?: Ref<any>;
   uid: string;
 } & Partial<RigidBodyProps>;
 
 const Railcar: FC<RailcarProps> = ({
   position,
-  color,
   refProp,
   uid,
   ...rigidBodyProps
@@ -34,47 +31,29 @@ const Railcar: FC<RailcarProps> = ({
     return () => {
       trainManager.removeTrainRef(uid);
     };
-  }, [trainManager, carRef]);
+  }, [trainManager]);
 
   const model = useMemo(() => {
     const cloned = trainModel.scene.clone(true);
 
-    cloned.traverse((child) => {
-      if ((child as any).isMesh && (child as any).material) {
-        const mesh = child as Mesh;
-
-        if (Array.isArray(mesh.material)) {
-          mesh.material = mesh.material.map((mat: { clone: () => any }) => {
-            const newMat = mat.clone();
-            newMat.color.set(color);
-            return newMat;
-          });
-        } else {
-          mesh.material = mesh.material.clone();
-          mesh.material.color.set(color);
-        }
-      }
-    });
-
-    return (
-      <primitive
-        object={cloned}
-        scale={[0.4, 0.5, 0.65]}
-        position={[0, 0, 0]}
-        rotation={[0, Math.PI / 2, 0]}
-      />
-    );
-  }, [trainModel, color]);
+    return cloned;
+  }, [trainModel]);
 
   return (
     <RigidBody
+      enabledRotations={[false, true, false]}
       colliders="trimesh"
       ref={carRef}
       mass={1}
       position={position}
       {...rigidBodyProps}
     >
-      {model}
+      <primitive
+        object={model}
+        scale={[0.4, 0.5, 0.65]}
+        position={[0, 0, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+      />
     </RigidBody>
   );
 };

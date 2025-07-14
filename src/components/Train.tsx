@@ -1,11 +1,4 @@
-import {
-  interactionGroups,
-  quat,
-  RapierRigidBody,
-  RigidBody,
-  useSphericalJoint,
-  vec3,
-} from "@react-three/rapier";
+import { quat, RapierRigidBody, RigidBody, vec3 } from "@react-three/rapier";
 import TrainWhistleController from "./TrainWhistleController";
 import { Vector3 } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -14,7 +7,6 @@ import useKeyControls from "../hooks/useKeyControls";
 import CONSTANTS from "../constants/trainConstants";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import Joint from "./Joint";
 import Railcar from "./Railcar";
 import { TrainContext } from "../contexts/trainContext";
 
@@ -24,7 +16,7 @@ function TrainModel() {
     <primitive
       object={trainModel.scene}
       scale={0.008}
-      position={[0, 0, 0]}
+      position={[0, -1, 0]}
       rotation={[0, Math.PI, 0]}
     />
   );
@@ -33,32 +25,25 @@ function TrainModel() {
 function Train() {
   const trainManager = useContext(TrainContext);
   const trainRef = useRef<RapierRigidBody>(null);
-  const redCartRef = useRef<RapierRigidBody>(null);
-  const greenCartRef = useRef<RapierRigidBody>(null);
 
   const [isMoving, setIsMoving] = useState(false);
 
   const { w, a, s, d } = useKeyControls();
   const { camera } = useThree();
 
-  const cartLength = 6;
+  const cartLength = 6.105;
   const gap = 1.75;
   const spacing = cartLength + gap;
 
   useEffect(() => {
     if (!trainManager || !trainRef.current) return;
-    trainManager.addTrainRef(
-      "-1",
-      trainRef as React.RefObject<RapierRigidBody>
-    );
+    trainManager.addTrainRef("0", trainRef as React.RefObject<RapierRigidBody>);
     return () => {
-      trainManager.removeTrainRef("-1");
+      trainManager.removeTrainRef("0");
     };
   }, [trainManager, trainRef]);
 
   useFrame((_, delta) => {
-    // if (!trainRef.current || !redCartRef.current || !greenCartRef.current)
-    //   return;
     if (!trainRef.current) return;
 
     if (w) {
@@ -110,22 +95,6 @@ function Train() {
       // }
     }
 
-    // lock rotation to stop train flipping
-    trainRef.current.setAngvel(
-      { x: 0, y: trainRef.current.angvel().y, z: 0 },
-      true
-    );
-
-    // redCartRef.current.setAngvel(
-    //   { x: 0, y: trainRef.current.angvel().y, z: 0 },
-    //   true
-    // );
-
-    // greenCartRef.current.setAngvel(
-    //   { x: 0, y: trainRef.current.angvel().y, z: 0 },
-    //   true
-    // );
-
     const velocity = trainRef.current.linvel();
     const speed = Math.sqrt(
       velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
@@ -135,14 +104,15 @@ function Train() {
       setIsMoving(currentlyMoving);
     }
 
+    if (!trainRef.current || !trainManager) return;
     const blueCartPos = vec3(trainRef.current.translation());
-    camera.position.set(blueCartPos.x + 15, blueCartPos.y + 30, blueCartPos.z);
+    camera.position.set(
+      blueCartPos.x + 15 + trainManager.carCount * 2,
+      blueCartPos.y + 20 + trainManager.carCount * 4,
+      blueCartPos.z
+    );
     camera.lookAt(blueCartPos);
   });
-
-  useEffect(() => {
-    console.log("Train Updated");
-  }, [trainRef, redCartRef, greenCartRef]);
   // // Attach the red cart's back (with gap) to the blue cart's front
   // useSphericalJoint(trainRef, redCartRef, [
   //   [0, 0.75, cartLength / 2], // front of blue cart
@@ -159,7 +129,9 @@ function Train() {
       <group>
         {/* Train (engine) */}
         <RigidBody
+          enabledRotations={[false, true, false]}
           name="train"
+          position={[0, 1, 0]}
           linearDamping={1}
           ref={trainRef}
           onCollisionEnter={() => {
@@ -169,30 +141,7 @@ function Train() {
         >
           <TrainModel />
         </RigidBody>
-        {/* Red cart*/}
-        <Railcar
-          refProp={redCartRef}
-          position={[0, 1, spacing]}
-          color="red"
-          uid="0"
-          linearDamping={1}
-        />
-        {/* Green cart*/}
-        <Railcar
-          refProp={greenCartRef}
-          position={[0, 1, spacing * 2]}
-          color="green"
-          uid="1"
-          linearDamping={1}
-        >
-          <mesh position={[0, 0.75, 0]} castShadow>
-            <boxGeometry args={[1.5, 1.5, cartLength]} />
-            <meshStandardMaterial color="green" />
-          </mesh>
-        </Railcar>
-        {/* Joints */}
-        {/* <Joint carRef1={trainRef} carRef2={redCartRef} />
-        <Joint carRef1={redCartRef} carRef2={greenCartRef} /> */}
+        {trainManager?.trainCars}
         {trainManager?.joints}
       </group>
       <TrainWhistleController moving={isMoving} />

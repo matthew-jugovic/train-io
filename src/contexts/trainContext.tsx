@@ -7,21 +7,56 @@ import {
   useState,
 } from "react";
 import Joint from "../components/Joint";
+import Railcar from "../components/Railcar";
 
 export const TrainContext = createContext<ITrainManager | null>(null);
 
 export function TrainProvider({ children }: { children: React.ReactNode }) {
+  const spacing = 6.105 + 1.75;
   const [trainRefs, setTrainRefs] = useState<
     Map<string, React.RefObject<RapierRigidBody>>
   >(new Map());
   const [joints, setJoints] = useState<React.ReactNode[]>([]);
 
+  const [carCount, setCarCount] = useState(2);
+
+  const [trainCars, setTrainCars] = useState<React.ReactElement[]>([]);
+
+  useEffect(() => {
+    const cars: React.ReactElement[] = [];
+
+    for (let i = 0; i < carCount; i++) {
+      const uid = (i + 1).toString();
+      const position = spacing * (i + 1);
+      cars.push(
+        <Railcar uid={uid} position={[0, 1, position]} linearDamping={1} />
+      );
+    }
+
+    setTrainCars(cars);
+  }, [carCount]);
+
   useEffect(() => {
     if (trainRefs.size <= 1) return;
     const newJoints = [];
-    const refs = Array.from(trainRefs.values()).reverse();
+
+    const sortedKeys = Array.from(trainRefs.keys()).sort(
+      (a, b) => Number(a) - Number(b)
+    );
+    const refs = sortedKeys
+      .map((key) => trainRefs.get(key))
+      .filter(
+        (ref): ref is React.RefObject<RapierRigidBody> => ref !== undefined
+      );
+
     for (let i = 1; i < trainRefs.size; i++) {
-      newJoints.push(<Joint carRef1={refs[i - 1]} carRef2={refs[i]} />);
+      newJoints.push(
+        <Joint
+          key={`joint-${sortedKeys[i - 1]}-${sortedKeys[i]}`}
+          carRef1={refs[i - 1]}
+          carRef2={refs[i]}
+        />
+      );
     }
     setJoints(newJoints);
   }, [trainRefs, setJoints]);
@@ -50,8 +85,11 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
     <TrainContext
       value={{
         joints,
+        trainCars,
         addTrainRef,
         removeTrainRef,
+        carCount,
+        setCarCount,
       }}
     >
       {children}
@@ -65,6 +103,9 @@ interface ITrainManager {
     trainRef: React.RefObject<RapierRigidBody>
   ) => void;
   removeTrainRef: (key: string) => void;
+  trainCars: React.ReactElement[];
+  carCount: number;
+  setCarCount: React.Dispatch<React.SetStateAction<number>>;
 }
 
 // class TrainManager {

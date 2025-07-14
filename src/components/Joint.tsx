@@ -14,8 +14,8 @@ type JointProps = {
 };
 export default function Joint({ carRef1, carRef2 }: JointProps) {
   useSphericalJoint(carRef1, carRef2, [
-    [0, 0.75, cartLength / 2], // front of blue cart
-    [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
+    [0, 0.25, cartLength / 2], // front of blue cart
+    [0, 0.25, -cartLength / 2 - gap], // back of red cart, offset by gap
   ]);
   return null;
 }

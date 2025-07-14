@@ -7,7 +7,6 @@ import {
   useRandomlyGeneratedPositions,
   type Range,
 } from "./hooks/useRandomlyGeneratedPositions";
-import Railcar from "./components/Railcar";
 import Ground from "./components/Ground";
 import Train from "./components/Train";
 import CONSTANTS from "./constants/trainConstants";
@@ -61,42 +60,41 @@ function App() {
 
   return (
     <div id="canvas-container">
-      <UI coalCollected={coalCollected} />
-      <Canvas camera={{ position: [0, 18, 5] }} shadows>
-        <Suspense>
-          <Physics colliders="cuboid" debug={false}>
-            a
-            {generatedPositions.map((pos, index) => (
-              <Railcar
-                uid="3"
-                key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                position={pos}
-              />
-            ))}
-            {coalPositions.generatedPositions.map((pos, index) => (
-              <Coal
-                key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                id={index}
-                position={pos}
-                dimensions={[1, 1, 1]}
-                onCollect={handleCoalCollected}
-              />
-            ))}
-            <TrainProvider>
+      <TrainProvider>
+        <Canvas camera={{ position: [0, 18, 5] }} shadows>
+          <Suspense>
+            <Physics colliders="cuboid" debug={false}>
+              {/* {generatedPositions.map((pos, index) => (
+                <Railcar
+                  uid={`${"x"}`}
+                  key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                  position={pos}
+                />
+              ))} */}
+              {coalPositions.generatedPositions.map((pos, index) => (
+                <Coal
+                  key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                  id={index}
+                  position={pos}
+                  dimensions={[1, 1, 1]}
+                  onCollect={handleCoalCollected}
+                />
+              ))}
               <Train />
-            </TrainProvider>
-            <Ground textureUrl={"/grassTexture.jpg"} />
-            <ambientLight intensity={0.3} color="white" />
-            <directionalLight
-              castShadow
-              position={[10, 10, 10]}
-              intensity={2}
-              shadow-mapSize-width={1024}
-              shadow-mapSize-height={1024}
-            />
-          </Physics>
-        </Suspense>
-      </Canvas>
+              <Ground textureUrl={"/grassTexture.jpg"} />
+              <ambientLight intensity={0.3} color="white" />
+              <directionalLight
+                castShadow
+                position={[10, 10, 10]}
+                intensity={2}
+                shadow-mapSize-width={1024}
+                shadow-mapSize-height={1024}
+              />
+            </Physics>
+          </Suspense>
+        </Canvas>
+        <UI coalCollected={coalCollected} />
+      </TrainProvider>
     </div>
   );
 }
