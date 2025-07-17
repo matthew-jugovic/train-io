@@ -7,7 +7,6 @@ import useKeyControls from "../hooks/useKeyControls";
 import CONSTANTS from "../constants/trainConstants";
 import { useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import Railcar from "./Railcar";
 import { TrainContext } from "../contexts/trainContext";
 
 function TrainModel() {
@@ -31,10 +30,6 @@ function Train() {
   const { w, a, s, d } = useKeyControls();
   const { camera } = useThree();
 
-  const cartLength = 6.105;
-  const gap = 1.75;
-  const spacing = cartLength + gap;
-
   useEffect(() => {
     if (!trainManager || !trainRef.current) return;
     trainManager.addTrainRef("0", trainRef as React.RefObject<RapierRigidBody>);
@@ -45,16 +40,18 @@ function Train() {
 
   useFrame((_, delta) => {
     if (!trainRef.current) return;
-
+    if (!trainManager || !trainRef.current) return;
+    const bonusSpeed = (trainManager.carCount - 1) * 1000;
+    const bonusTurn = (trainManager.carCount - 1) * 5;
     if (w) {
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(quat(trainRef.current.rotation()));
-      forward.multiplyScalar(CONSTANTS.speed * delta);
+      forward.multiplyScalar((CONSTANTS.speed + bonusSpeed) * delta);
       trainRef.current.applyImpulse(forward, true);
     }
     if (a) {
       trainRef.current.applyTorqueImpulse(
-        { x: 0, y: CONSTANTS.turn_speed, z: 0 },
+        { x: 0, y: CONSTANTS.turn_speed + bonusTurn, z: 0 },
         true
       );
       // if (redCartRef.current) {
@@ -78,7 +75,7 @@ function Train() {
     }
     if (d) {
       trainRef.current.applyTorqueImpulse(
-        { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
+        { x: 0, y: -(CONSTANTS.turn_speed + bonusTurn), z: 0 },
         true
       );
       // if (redCartRef.current) {

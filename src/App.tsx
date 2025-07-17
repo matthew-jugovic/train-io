@@ -1,7 +1,5 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useRef, useEffect, useState, Suspense, startTransition } from "react";
-import { DoubleSide, RepeatWrapping, Vector3 } from "three";
-import { useTexture } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { useEffect, useState, Suspense } from "react";
 import { GUI } from "lil-gui";
 import {
   useRandomlyGeneratedPositions,
@@ -14,6 +12,7 @@ import { Physics } from "@react-three/rapier";
 import UI from "./components/UI";
 import Coal from "./components/Coal";
 import { TrainProvider } from "./contexts/trainContext";
+import StaticRailcar from "./components/StaticRailcar";
 
 const X_RANGE: Range = [-250, 250];
 const Y_RANGE: Range = [1, 1];
@@ -64,13 +63,12 @@ function App() {
         <Canvas camera={{ position: [0, 18, 5] }} shadows>
           <Suspense>
             <Physics colliders="cuboid" debug={false}>
-              {/* {generatedPositions.map((pos, index) => (
-                <Railcar
-                  uid={`${"x"}`}
+              {generatedPositions.map((pos, index) => (
+                <StaticRailcar
                   key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
                   position={pos}
                 />
-              ))} */}
+              ))}
               {coalPositions.generatedPositions.map((pos, index) => (
                 <Coal
                   key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}

@@ -1,13 +1,8 @@
 import type { RapierRigidBody } from "@react-three/rapier";
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 import Joint from "../components/Joint";
 import Railcar from "../components/Railcar";
+import { Euler, Quaternion, Vector3 } from "three";
 
 export const TrainContext = createContext<ITrainManager | null>(null);
 
@@ -17,49 +12,34 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
     Map<string, React.RefObject<RapierRigidBody>>
   >(new Map());
   const [joints, setJoints] = useState<React.ReactNode[]>([]);
-
-  const [carCount, setCarCount] = useState(2);
-
+  const [carCount, setCarCount] = useState(1);
   const [trainCars, setTrainCars] = useState<React.ReactElement[]>([]);
-
-  useEffect(() => {
-    const cars: React.ReactElement[] = [];
-
-    for (let i = 0; i < carCount; i++) {
-      const uid = (i + 1).toString();
-      const position = spacing * (i + 1);
-      cars.push(
-        <Railcar uid={uid} position={[0, 1, position]} linearDamping={1} />
-      );
-    }
-
-    setTrainCars(cars);
-  }, [carCount]);
 
   useEffect(() => {
     if (trainRefs.size <= 1) return;
     const newJoints = [];
 
-    const sortedKeys = Array.from(trainRefs.keys()).sort(
-      (a, b) => Number(a) - Number(b)
-    );
-    const refs = sortedKeys
-      .map((key) => trainRefs.get(key))
-      .filter(
-        (ref): ref is React.RefObject<RapierRigidBody> => ref !== undefined
-      );
-
     for (let i = 1; i < trainRefs.size; i++) {
+      const ref1 = trainRefs.get((i - 1).toString());
+      const ref2 = trainRefs.get(i.toString());
+
+      if (!ref1 || !ref2) return;
       newJoints.push(
-        <Joint
-          key={`joint-${sortedKeys[i - 1]}-${sortedKeys[i]}`}
-          carRef1={refs[i - 1]}
-          carRef2={refs[i]}
-        />
+        <Joint key={`joint-${i - 1}-${i}`} carRef1={ref1} carRef2={ref2} />
       );
     }
     setJoints(newJoints);
   }, [trainRefs, setJoints]);
+
+  // create initial cart
+  useEffect(() => {
+    if (trainCars.length === 0) {
+      const firstCar = (
+        <Railcar key="1" uid="1" position={[0, 1, spacing]} linearDamping={1} />
+      );
+      setTrainCars([firstCar]);
+    }
+  }, [trainCars, spacing]);
 
   const addTrainRef = useCallback(
     (key: string, trainRef: React.RefObject<RapierRigidBody>) => {
@@ -81,6 +61,44 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
     },
     [setTrainRefs]
   );
+
+  const addCar = useCallback(() => {
+    const lastKey = carCount.toString();
+    const lastRef = trainRefs.get(lastKey);
+
+    if (!lastRef?.current) return;
+    const uid = (carCount + 1).toString();
+    // calculate rotation
+    const lastRot = lastRef.current.rotation();
+    const q = new Quaternion(lastRot.x, lastRot.y, lastRot.z, lastRot.w);
+    const forward = new Vector3(0, 0, 1).applyQuaternion(q).normalize();
+    const newRot = new Euler().setFromQuaternion(q, "YXZ");
+    //calculate position
+    const lastPos = lastRef.current.translation();
+    const newX = lastPos.x + forward.x * spacing;
+    const newZ = lastPos.z + forward.z * spacing;
+
+    const newCar = (
+      <Railcar
+        uid={uid}
+        position={[newX, 1, newZ]}
+        rotation={[newRot.x, newRot.y, newRot.z]}
+        linearDamping={1}
+      />
+    );
+    setTrainCars((prev) => [...prev, newCar]);
+    setCarCount((count) => count + 1);
+  }, [trainRefs, carCount, spacing]);
+
+  const removeCar = useCallback(() => {
+    if (carCount <= 1) return;
+    const newTrainCars = trainCars.slice(0, -1);
+
+    setTrainCars(newTrainCars);
+    removeTrainRef(carCount.toString());
+    setCarCount(carCount - 1);
+  }, [carCount, trainCars, removeTrainRef]);
+
   return (
     <TrainContext
       value={{
@@ -89,13 +107,15 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
         addTrainRef,
         removeTrainRef,
         carCount,
-        setCarCount,
+        addCar,
+        removeCar,
       }}
     >
       {children}
     </TrainContext>
   );
 }
+
 interface ITrainManager {
   joints: React.ReactNode[];
   addTrainRef: (
@@ -105,36 +125,6 @@ interface ITrainManager {
   removeTrainRef: (key: string) => void;
   trainCars: React.ReactElement[];
   carCount: number;
-  setCarCount: React.Dispatch<React.SetStateAction<number>>;
+  addCar: () => void;
+  removeCar: () => void;
 }
-
-// class TrainManager {
-//   private _trainRefs: Map<string, React.RefObject<RapierRigidBody>>;
-//   private _joints: React.ReactNode[];
-//   constructor() {
-//     this._trainRefs = new Map();
-//     this._joints = [];
-//   }
-//   public get trainRefs() {
-//     return this._trainRefs;
-//   }
-//   public get joints() {
-//     return this._joints;
-//   }
-//   public addTrainRef(key: string, trainRef: React.RefObject<RapierRigidBody>) {
-//     this._trainRefs.set(key, trainRef);
-//     this._updateJoints();
-//   }
-//   public removeTrainRef(key: string) {
-//     this._trainRefs.delete(key);
-//     this._updateJoints();
-//   }
-//   private _updateJoints() {
-//     if (this._trainRefs.size <= 1) return;
-//     const joints = [];
-//     const trainRefs = Array.from(this._trainRefs.values());
-//     for (let i = 1; i < this.trainRefs.size; i++) {
-//       joints.push(<Joint carRef1={trainRefs[i - 1]} carRef2={trainRefs[i]} />);
-//     }
-//   }
-// }

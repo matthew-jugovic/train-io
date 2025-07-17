@@ -18,22 +18,19 @@ export default function UI({ coalCollected }: UIProps) {
     );
   }
 
-  const { carCount, setCarCount } = trainManager;
+  const { carCount } = trainManager;
+  const { addCar } = trainManager;
+  const { removeCar } = trainManager;
 
   return (
     <div className="UI">
       <div>Coal Collected: {coalCollected}</div>
       <div style={{ marginTop: 10 }}>Current length: {carCount}</div>
       <div style={{ marginTop: 10 }}>
-        <button
-          onClick={() => setCarCount((count) => Math.max(1, count - 1))}
-          style={{ marginRight: 8 }}
-        >
+        <button onClick={() => removeCar()} style={{ marginRight: 8 }}>
           Remove Car
         </button>
-        <button onClick={() => setCarCount((count) => count + 1)}>
-          Add Car
-        </button>
+        <button onClick={() => addCar()}>Add Car</button>
       </div>
     </div>
   );
