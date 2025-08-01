@@ -3,10 +3,11 @@ import { TrainContext } from "../contexts/trainContext";
 import "./UI.css";
 
 type UIProps = {
+  railsCollected: number;
   coalCollected: number;
 };
 
-export default function UI({ coalCollected }: UIProps) {
+export default function UI({ railsCollected, coalCollected }: UIProps) {
   const trainManager = useContext(TrainContext);
 
   if (!trainManager) {
@@ -24,6 +25,7 @@ export default function UI({ coalCollected }: UIProps) {
 
   return (
     <div className="UI">
+      <div>Rails Collected: {railsCollected}</div>
       <div>Coal Collected: {coalCollected}</div>
       <div style={{ marginTop: 10 }}>Current length: {carCount}</div>
       <div style={{ marginTop: 10 }}>

@@ -14,13 +14,15 @@ import Coal from "./components/Coal";
 import { TrainProvider } from "./contexts/trainContext";
 import StaticRailcar from "./components/StaticRailcar";
 import GameMap from "./components/GameMap";
+import Rails from "./components/Rails";
 
-const X_RANGE: Range = [-250, 250];
+const X_RANGE: Range = [-150, 150];
 const Y_RANGE: Range = [1, 1];
-const Z_RANGE: Range = [-250, 250];
+const Z_RANGE: Range = [-150, 150];
 
 function App() {
   const [coalCollected, setCoalCollected] = useState(0);
+  const [railsCollected, setRailsCollected] = useState(0);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
@@ -29,27 +31,41 @@ function App() {
     setCoalCollected((count) => count + 1);
   };
 
-  const { generatedPositions, generatePositions } =
-    useRandomlyGeneratedPositions({
-      numPositions: 100,
-      xRange: X_RANGE,
-      yRange: Y_RANGE,
-      zRange: Z_RANGE,
-    });
+  const handleRailsCollected = () => {
+    setRailsCollected((count) => count + 5);
+  };
+
+  // const { generatedPositions, generatePositions } =
+  //   useRandomlyGeneratedPositions({
+  //     numPositions: 100,
+  //     xRange: X_RANGE,
+  //     yRange: Y_RANGE,
+  //     zRange: Z_RANGE,
+  //   });
   const coalPositions = useRandomlyGeneratedPositions({
     numPositions: 500,
     xRange: X_RANGE,
     yRange: Y_RANGE,
     zRange: Z_RANGE,
   });
+  const railsPositions = useRandomlyGeneratedPositions({
+    numPositions: 10,
+    xRange: X_RANGE,
+    yRange: Y_RANGE,
+    zRange: Z_RANGE,
+  });
 
-  useEffect(() => {
-    generatePositions();
-  }, [generatePositions]);
+  // useEffect(() => {
+  //   generatePositions();
+  // }, [generatePositions]);
 
   useEffect(() => {
     coalPositions.generatePositions();
   }, [coalPositions.generatePositions]);
+
+  useEffect(() => {
+    railsPositions.generatePositions();
+  }, [railsPositions.generatePositions]);
 
   useEffect(() => {
     const gui = new GUI();
@@ -61,22 +77,20 @@ function App() {
     };
   }, []);
 
-
-  const hasVisited = useRef(false)
+  const hasVisited = useRef(false);
   useEffect(() => {
     if (!hasVisited.current) {
-
-      hasVisited.current = true
+      hasVisited.current = true;
       const response_data = fetch("http://localhost:3000/visit", {
         method: "POST",
       })
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           const visitorCountElement = document.getElementById("visitor_count");
           if (visitorCountElement) {
             visitorCountElement.textContent = `Visitor Count: ${data.visit_count}`;
           }
-        })
+        });
     }
 
     const ws = new WebSocket("ws://localhost:3000/ws");
@@ -97,7 +111,7 @@ function App() {
         });
       }
     };
-    
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       const chatLogElement = document.getElementById("public_chat_log");
@@ -105,15 +119,12 @@ function App() {
       if (chatLogElement) {
         chatLogElement.textContent += `${data.username}: ${data.message}\n`;
       }
-    }
-
-
-
+    };
 
     return () => {
-      ws.close()
+      ws.close();
       console.log("WebSocket connection closed.");
-    }
+    };
   }, []);
 
   return (
@@ -131,6 +142,15 @@ function App() {
                   onCollect={handleCoalCollected}
                 />
               ))}
+              {railsPositions.generatedPositions.map((pos, index) => (
+                <Rails
+                  key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                  id={index}
+                  position={pos}
+                  // dimensions={[2.5, 2.5, 0.5]}
+                  onCollect={handleRailsCollected}
+                />
+              ))}
               <Train />
               <GameMap />
               <ambientLight intensity={0.3} color="white" />
@@ -144,27 +164,28 @@ function App() {
             </Physics>
           </Suspense>
         </Canvas>
-        <UI coalCollected={coalCollected} />
+        <UI coalCollected={coalCollected} railsCollected={railsCollected} />
       </TrainProvider>
       <div id="public_chat" className="overlay bg-white">
         <p id="visitor_count">...</p>
         <p id="public_chat_log"></p>
-        <input 
-          id="public_username" 
-          type="text" 
+        <input
+          id="public_username"
+          type="text"
           placeholder="Enter your name..."
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-        <input 
-          id="public_chat_input" 
-          type="textarea" 
+        <input
+          id="public_chat_input"
+          type="textarea"
           placeholder="Type your message here..."
           value={chatMessage}
           onChange={(e) => setChatMessage(e.target.value)}
         />
-        <button id="public_chat_send" className="bg-blue-300">Send</button>
-
+        <button id="public_chat_send" className="bg-blue-300">
+          Send
+        </button>
       </div>
     </div>
   );
