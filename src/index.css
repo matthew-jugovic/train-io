@@ -1,8 +1,21 @@
+@import "tailwindcss";
+
 body {
   margin: 0
 }
 
 #canvas-container {
+  position: relative;
   width: 100vw;
   height: 100vh;
+}
+
+.overlay {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: auto;
+  height: auto;
+  white-space: pre-wrap;
+  z-index: 100000;
 }
