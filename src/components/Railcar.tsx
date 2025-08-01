@@ -42,7 +42,7 @@ const Railcar: FC<RailcarProps> = ({
   return (
     <RigidBody
       enabledRotations={[false, true, false]}
-      colliders="trimesh"
+      colliders="hull"
       ref={carRef}
       mass={1}
       position={position}

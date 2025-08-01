@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { GUI } from "lil-gui";
 import {
   useRandomlyGeneratedPositions,
@@ -13,6 +13,7 @@ import UI from "./components/UI";
 import Coal from "./components/Coal";
 import { TrainProvider } from "./contexts/trainContext";
 import StaticRailcar from "./components/StaticRailcar";
+import GameMap from "./components/GameMap";
 
 const X_RANGE: Range = [-250, 250];
 const Y_RANGE: Range = [1, 1];
@@ -20,6 +21,9 @@ const Z_RANGE: Range = [-250, 250];
 
 function App() {
   const [coalCollected, setCoalCollected] = useState(0);
+
+  const [username, setUsername] = useState("");
+  const [chatMessage, setChatMessage] = useState("");
 
   const handleCoalCollected = () => {
     setCoalCollected((count) => count + 1);
@@ -57,18 +61,67 @@ function App() {
     };
   }, []);
 
+
+  const hasVisited = useRef(false)
+  useEffect(() => {
+    if (!hasVisited.current) {
+
+      hasVisited.current = true
+      const response_data = fetch("http://localhost:3000/visit", {
+        method: "POST",
+      })
+        .then(res => res.json())
+        .then(data => {
+          const visitorCountElement = document.getElementById("visitor_count");
+          if (visitorCountElement) {
+            visitorCountElement.textContent = `Visitor Count: ${data.visit_count}`;
+          }
+        })
+    }
+
+    const ws = new WebSocket("ws://localhost:3000/ws");
+    ws.onopen = () => {
+      console.log("WebSocket connection opened.");
+      const send_button_element = document.getElementById("public_chat_send");
+      const chat_input_element = document.getElementById("public_chat_input");
+      const username_input_element = document.getElementById("public_username");
+
+      if (send_button_element && chat_input_element && username_input_element) {
+        send_button_element.addEventListener("click", () => {
+          const message = chat_input_element.value;
+          const username = username_input_element.value || "Anonymous";
+          if (message.trim() !== "") {
+            ws.send(JSON.stringify({ username, message }));
+            chat_input_element.value = ""; // Clear input after sending
+          }
+        });
+      }
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const chatLogElement = document.getElementById("public_chat_log");
+      const visitorCountElement = document.getElementById("visitor_count");
+      if (chatLogElement) {
+        chatLogElement.textContent += `${data.username}: ${data.message}\n`;
+      }
+    }
+
+
+
+
+    return () => {
+      ws.close()
+      console.log("WebSocket connection closed.");
+    }
+  }, []);
+
   return (
     <div id="canvas-container">
       <TrainProvider>
         <Canvas camera={{ position: [0, 18, 5] }} shadows>
           <Suspense>
             <Physics colliders="cuboid" debug={false}>
-              {generatedPositions.map((pos, index) => (
-                <StaticRailcar
-                  key={`railcar-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                  position={pos}
-                />
-              ))}
               {coalPositions.generatedPositions.map((pos, index) => (
                 <Coal
                   key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
@@ -79,7 +132,7 @@ function App() {
                 />
               ))}
               <Train />
-              <Ground textureUrl={"/grassTexture.jpg"} />
+              <GameMap />
               <ambientLight intensity={0.3} color="white" />
               <directionalLight
                 castShadow
@@ -93,6 +146,26 @@ function App() {
         </Canvas>
         <UI coalCollected={coalCollected} />
       </TrainProvider>
+      <div id="public_chat" className="overlay bg-white">
+        <p id="visitor_count">...</p>
+        <p id="public_chat_log"></p>
+        <input 
+          id="public_username" 
+          type="text" 
+          placeholder="Enter your name..."
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input 
+          id="public_chat_input" 
+          type="textarea" 
+          placeholder="Type your message here..."
+          value={chatMessage}
+          onChange={(e) => setChatMessage(e.target.value)}
+        />
+        <button id="public_chat_send" className="bg-blue-300">Send</button>
+
+      </div>
     </div>
   );
 }
