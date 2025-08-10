@@ -1,5 +1,5 @@
 const CONSTANTS = {
-  speed: 2000,
-  turn_speed: 30,
+  speed: 4000,
+  turn_speed: 40,
 };
 export default CONSTANTS;

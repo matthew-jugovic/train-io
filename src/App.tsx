@@ -5,20 +5,19 @@ import {
   useRandomlyGeneratedPositions,
   type Range,
 } from "./hooks/useRandomlyGeneratedPositions";
-import Ground from "./components/Ground";
 import Train from "./components/Train";
 import CONSTANTS from "./constants/trainConstants";
 import { Physics } from "@react-three/rapier";
 import UI from "./components/UI";
 import Coal from "./components/Coal";
 import { TrainProvider } from "./contexts/trainContext";
-import StaticRailcar from "./components/StaticRailcar";
 import GameMap from "./components/GameMap";
 import Rails from "./components/Rails";
+import { PassengerProvider } from "./contexts/passengerContext";
 
-const X_RANGE: Range = [-150, 150];
+const X_RANGE: Range = [-370, 370];
 const Y_RANGE: Range = [1, 1];
-const Z_RANGE: Range = [-150, 150];
+const Z_RANGE: Range = [-370, 370];
 
 function App() {
   const [coalCollected, setCoalCollected] = useState(0);
@@ -130,41 +129,43 @@ function App() {
   return (
     <div id="canvas-container">
       <TrainProvider>
-        <Canvas camera={{ position: [0, 18, 5] }} shadows>
-          <Suspense>
-            <Physics colliders="cuboid" debug={false}>
-              {coalPositions.generatedPositions.map((pos, index) => (
-                <Coal
-                  key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                  id={index}
-                  position={pos}
-                  dimensions={[1, 1, 1]}
-                  onCollect={handleCoalCollected}
+        <PassengerProvider maxPassengers={20}>
+          <Canvas camera={{ position: [0, 18, 5] }} shadows>
+            <Suspense>
+              <Physics gravity={[0, -20, 0]} colliders="cuboid" debug={false}>
+                {coalPositions.generatedPositions.map((pos, index) => (
+                  <Coal
+                    key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                    id={index}
+                    position={pos}
+                    dimensions={[1, 1, 1]}
+                    onCollect={handleCoalCollected}
+                  />
+                ))}
+                {railsPositions.generatedPositions.map((pos, index) => (
+                  <Rails
+                    key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                    id={index}
+                    position={pos}
+                    // dimensions={[2.5, 2.5, 0.5]}
+                    onCollect={handleRailsCollected}
+                  />
+                ))}
+                <Train />
+                <GameMap />
+                <ambientLight intensity={0.3} color="white" />
+                <directionalLight
+                  castShadow
+                  position={[10, 10, 10]}
+                  intensity={2}
+                  shadow-mapSize-width={1024}
+                  shadow-mapSize-height={1024}
                 />
-              ))}
-              {railsPositions.generatedPositions.map((pos, index) => (
-                <Rails
-                  key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                  id={index}
-                  position={pos}
-                  // dimensions={[2.5, 2.5, 0.5]}
-                  onCollect={handleRailsCollected}
-                />
-              ))}
-              <Train />
-              <GameMap />
-              <ambientLight intensity={0.3} color="white" />
-              <directionalLight
-                castShadow
-                position={[10, 10, 10]}
-                intensity={2}
-                shadow-mapSize-width={1024}
-                shadow-mapSize-height={1024}
-              />
-            </Physics>
-          </Suspense>
-        </Canvas>
-        <UI coalCollected={coalCollected} railsCollected={railsCollected} />
+              </Physics>
+            </Suspense>
+          </Canvas>
+          <UI coalCollected={coalCollected} railsCollected={railsCollected} />
+        </PassengerProvider>
       </TrainProvider>
       <div id="public_chat" className="overlay bg-white">
         <p id="visitor_count">...</p>
