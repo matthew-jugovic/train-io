@@ -17,11 +17,11 @@ const StaticRailcar: FC<StaticRailcarProps> = ({ position, rotation }) => {
   const collectedRef = useRef(false);
   const trainManager = useContext(TrainContext);
 
-  if (!trainManager) return null;
-
   const model = useMemo(() => {
     return trainModel.scene.clone(true);
   }, [trainModel]);
+
+  if (!trainManager) return null;
 
   if (collected) return null;
 
