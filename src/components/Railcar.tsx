@@ -1,6 +1,7 @@
 import type { FC, Ref } from "react";
 import type { XYZ } from "../types/XYZ";
 import {
+  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   type RigidBodyProps,
@@ -41,13 +42,14 @@ const Railcar: FC<RailcarProps> = ({
 
   return (
     <RigidBody
-      enabledRotations={[false, true, false]}
-      colliders="hull"
+      colliders={false}
       ref={carRef}
-      mass={1}
+      linearDamping={2}
+      angularDamping={1}
       position={position}
       {...rigidBodyProps}
     >
+      <CuboidCollider args={[1.2, 1, 3.5]} position={[0, 0, 0]} />
       <primitive
         object={model}
         scale={[0.4, 0.5, 0.65]}

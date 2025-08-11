@@ -6,24 +6,20 @@
   padding: 20px;
   border-radius: 20px;
   color: #ffffff;
+  text-align: center;
   font-family: sans-serif;
-  width: 200px;
+  width: 270px;
   z-index: 10;
   font-size: 1.5em;
 }
 
-.UI label {
-  display: block;
-  margin: 10px 0 4px;
-  font-size: 0.9em;
-}
-
 .UI button {
-  width: 100%;
+  width: 70%;
   padding: 6px;
   background: #4caf50;
   color: white;
   border: none;
+  margin-top: 5px;
   border-radius: 4px;
   cursor: pointer;
 }

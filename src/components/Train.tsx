@@ -1,6 +1,12 @@
-import { quat, RapierRigidBody, RigidBody, vec3 } from "@react-three/rapier";
+import {
+  CuboidCollider,
+  quat,
+  RapierRigidBody,
+  RigidBody,
+  vec3,
+} from "@react-three/rapier";
 import TrainWhistleController from "./TrainWhistleController";
-import { Vector3 } from "three";
+import { Euler, Vector3, Quaternion } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useContext, useEffect, useRef, useState } from "react";
 import useKeyControls from "../hooks/useKeyControls";
@@ -18,6 +24,28 @@ function TrainModel() {
       position={[0, -1, 0]}
       rotation={[0, Math.PI, 0]}
     />
+  );
+}
+
+function clampRotation(body: RapierRigidBody, maxRollDegrees = 10) {
+  const rot = body.rotation(); // Rapier quaternion
+  const q = new Quaternion(rot.x, rot.y, rot.z, rot.w);
+
+  const euler = new Euler().setFromQuaternion(q, "YXZ");
+
+  const maxRoll = (maxRollDegrees * Math.PI) / 180;
+  euler.z = Math.max(-maxRoll, Math.min(maxRoll, euler.z));
+
+  const clampedQuat = new Quaternion().setFromEuler(euler);
+
+  body.setRotation(
+    {
+      x: clampedQuat.x,
+      y: clampedQuat.y,
+      z: clampedQuat.z,
+      w: clampedQuat.w,
+    },
+    true
   );
 }
 
@@ -41,8 +69,8 @@ function Train() {
   useFrame((_, delta) => {
     if (!trainRef.current) return;
     if (!trainManager || !trainRef.current) return;
-    const bonusSpeed = (trainManager.carCount - 1) * 1000;
-    const bonusTurn = (trainManager.carCount - 1) * 5;
+    const bonusSpeed = (trainManager.carCount - 1) * 1200;
+    const bonusTurn = (trainManager.carCount - 1) * 7;
     if (w) {
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(quat(trainRef.current.rotation()));
@@ -54,18 +82,6 @@ function Train() {
         { x: 0, y: CONSTANTS.turn_speed + bonusTurn, z: 0 },
         true
       );
-      // if (redCartRef.current) {
-      //   redCartRef.current.applyTorqueImpulse(
-      //     { x: 0, y: CONSTANTS.turn_speed, z: 0 },
-      //     true
-      //   );
-      // }
-      // if (greenCartRef.current) {
-      //   greenCartRef.current.applyTorqueImpulse(
-      //     { x: 0, y: CONSTANTS.turn_speed, z: 0 },
-      //     true
-      //   );
-      // }
     }
     if (s) {
       trainRef.current.setLinvel(
@@ -78,18 +94,6 @@ function Train() {
         { x: 0, y: -(CONSTANTS.turn_speed + bonusTurn), z: 0 },
         true
       );
-      // if (redCartRef.current) {
-      //   redCartRef.current.applyTorqueImpulse(
-      //     { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
-      //     true
-      //   );
-      // }
-      // if (greenCartRef.current) {
-      //   greenCartRef.current.applyTorqueImpulse(
-      //     { x: 0, y: -CONSTANTS.turn_speed, z: 0 },
-      //     true
-      //   );
-      // }
     }
 
     const velocity = trainRef.current.linvel();
@@ -101,41 +105,38 @@ function Train() {
       setIsMoving(currentlyMoving);
     }
 
+    clampRotation(trainRef.current, 20);
+    trainManager.trainRefs.forEach((ref: { current: RapierRigidBody }) => {
+      if (ref.current) {
+        clampRotation(ref.current, 10);
+      }
+    });
+
+    //Camera
     if (!trainRef.current || !trainManager) return;
-    const blueCartPos = vec3(trainRef.current.translation());
+    const trainPos = vec3(trainRef.current.translation());
     camera.position.set(
-      blueCartPos.x + 15 + trainManager.carCount * 2,
-      blueCartPos.y + 20 + trainManager.carCount * 4,
-      blueCartPos.z
+      trainPos.x + 15 + trainManager.carCount * 2,
+      trainPos.y + 30 + trainManager.carCount * 4,
+      trainPos.z
     );
-    camera.lookAt(blueCartPos);
+    camera.lookAt(trainPos);
   });
-  // // Attach the red cart's back (with gap) to the blue cart's front
-  // useSphericalJoint(trainRef, redCartRef, [
-  //   [0, 0.75, cartLength / 2], // front of blue cart
-  //   [0, 0.75, -cartLength / 2 - gap], // back of red cart, offset by gap
-  // ]);
-  // // Attach the green cart's back (with gap) to the red cart's front
-  // useSphericalJoint(redCartRef, greenCartRef, [
-  //   [0, 0.75, cartLength / 2], // front of red cart
-  //   [0, 0.75, -cartLength / 2 - gap], // back of green cart, offset by gap
-  // ]);
 
   return (
     <>
       <group>
         {/* Train (engine) */}
         <RigidBody
-          enabledRotations={[false, true, false]}
           name="train"
+          colliders={false}
           position={[0, 1, 0]}
-          linearDamping={1}
           ref={trainRef}
-          onCollisionEnter={() => {
-            console.log("Collision");
-          }}
-          colliders="hull"
+          linearDamping={1.5}
+          angularDamping={0}
         >
+          <CuboidCollider args={[1.5, 1.5, 3.5]} position={[0, 0.5, 0]} />
+
           <TrainModel />
         </RigidBody>
         {trainManager?.trainCars}

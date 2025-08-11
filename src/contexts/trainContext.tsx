@@ -104,6 +104,7 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
       value={{
         joints,
         trainCars,
+        trainRefs,
         addTrainRef,
         removeTrainRef,
         carCount,
@@ -124,6 +125,7 @@ interface ITrainManager {
   ) => void;
   removeTrainRef: (key: string) => void;
   trainCars: React.ReactElement[];
+  trainRefs: Map<string, React.RefObject<RapierRigidBody>>;
   carCount: number;
   addCar: () => void;
   removeCar: () => void;

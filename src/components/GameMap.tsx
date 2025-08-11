@@ -1,28 +1,37 @@
 import { useGLTF } from "@react-three/drei";
 import { RigidBody, RapierRigidBody } from "@react-three/rapier";
 import { useMemo, useRef, type JSX } from "react";
-import { Object3D } from "three";
+import { Euler, Object3D, Quaternion, Vector3 } from "three";
+import Station from "./Station";
 
 export default function GameMap() {
   const { scene } = useGLTF("/map.glb");
 
-  const dynamicTrees = useMemo(() => {
+  const { trees, stations } = useMemo(() => {
     const trees: JSX.Element[] = [];
+    const stations: JSX.Element[] = [];
 
     scene.traverse((child) => {
       if (child.name.startsWith("Tree")) {
-        trees.push(<Tree treeMesh={child} />);
+        trees.push(<Tree key={child.uuid} treeMesh={child} />);
+      }
+
+      if (child.name.startsWith("Station")) {
+        stations.push(<Station key={child.uuid} stationMesh={child} />);
       }
     });
-    return trees;
+
+    return { trees, stations };
   }, [scene]);
 
   return (
     <>
       <RigidBody type="fixed" colliders="hull">
-        <primitive object={scene} />
+        <primitive object={scene} position={[0, 0, 0]} />
       </RigidBody>
-      {dynamicTrees}
+
+      {trees}
+      {stations}
     </>
   );
 }
