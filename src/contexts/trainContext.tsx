@@ -16,6 +16,10 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
   const [trainCars, setTrainCars] = useState<React.ReactElement[]>([]);
 
   useEffect(() => {
+    console.log("TrainContext mounted");
+  }, []);
+
+  useEffect(() => {
     if (trainRefs.size <= 1) return;
     const newJoints = [];
 
@@ -29,17 +33,15 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
       );
     }
     setJoints(newJoints);
-  }, [trainRefs, setJoints]);
+  }, [trainRefs]);
 
   // create initial cart
   useEffect(() => {
-    if (trainCars.length === 0) {
-      const firstCar = (
-        <Railcar key="1" uid="1" position={[0, 1, spacing]} linearDamping={1} />
-      );
-      setTrainCars([firstCar]);
-    }
-  }, [trainCars, spacing]);
+    const firstCar = (
+      <Railcar key="1" uid="1" position={[0, 2, spacing]} linearDamping={1} />
+    );
+    setTrainCars([firstCar]);
+  }, [spacing]);
 
   const addTrainRef = useCallback(
     (key: string, trainRef: React.RefObject<RapierRigidBody>) => {
@@ -49,18 +51,15 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
         return map;
       });
     },
-    [setTrainRefs]
+    []
   );
-  const removeTrainRef = useCallback(
-    (key: string) => {
-      setTrainRefs((prev) => {
-        const map = new Map(prev);
-        map.delete(key);
-        return map;
-      });
-    },
-    [setTrainRefs]
-  );
+  const removeTrainRef = useCallback((key: string) => {
+    setTrainRefs((prev) => {
+      const map = new Map(prev);
+      map.delete(key);
+      return map;
+    });
+  }, []);
 
   const addCar = useCallback(() => {
     const lastKey = carCount.toString();
@@ -80,8 +79,9 @@ export function TrainProvider({ children }: { children: React.ReactNode }) {
 
     const newCar = (
       <Railcar
+        key={uid}
         uid={uid}
-        position={[newX, 1, newZ]}
+        position={[newX, 2, newZ]}
         rotation={[newRot.x, newRot.y, newRot.z]}
         linearDamping={1}
       />

@@ -32,7 +32,7 @@ const Railcar: FC<RailcarProps> = ({
     return () => {
       trainManager.removeTrainRef(uid);
     };
-  }, [trainManager]);
+  }, [uid]);
 
   const model = useMemo(() => {
     const cloned = trainModel.scene.clone(true);
@@ -42,6 +42,7 @@ const Railcar: FC<RailcarProps> = ({
 
   return (
     <RigidBody
+      key={uid}
       colliders={false}
       ref={carRef}
       linearDamping={2}

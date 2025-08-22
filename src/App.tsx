@@ -14,21 +14,17 @@ import { TrainProvider } from "./contexts/trainContext";
 import GameMap from "./components/GameMap";
 import Rails from "./components/Rails";
 import { PassengerProvider } from "./contexts/passengerContext";
+import { CollectibleProvider } from "./contexts/collectibleContext";
 
 const X_RANGE: Range = [-370, 370];
 const Y_RANGE: Range = [1, 1];
 const Z_RANGE: Range = [-370, 370];
 
 function App() {
-  const [coalCollected, setCoalCollected] = useState(0);
   const [railsCollected, setRailsCollected] = useState(0);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
-
-  const handleCoalCollected = () => {
-    setCoalCollected((count) => count + 1);
-  };
 
   const handleRailsCollected = () => {
     setRailsCollected((count) => count + 5);
@@ -101,10 +97,13 @@ function App() {
 
       if (send_button_element && chat_input_element && username_input_element) {
         send_button_element.addEventListener("click", () => {
+          // @ts-expect-error
           const message = chat_input_element.value;
+          // @ts-expect-error
           const username = username_input_element.value || "Anonymous";
           if (message.trim() !== "") {
             ws.send(JSON.stringify({ username, message }));
+            // @ts-expect-error
             chat_input_element.value = ""; // Clear input after sending
           }
         });
@@ -130,41 +129,42 @@ function App() {
     <div id="canvas-container">
       <TrainProvider>
         <PassengerProvider maxPassengers={20}>
-          <Canvas camera={{ position: [0, 18, 5] }} shadows>
-            <Suspense>
-              <Physics gravity={[0, -20, 0]} colliders="cuboid" debug={false}>
-                {coalPositions.generatedPositions.map((pos, index) => (
-                  <Coal
-                    key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                    id={index}
-                    position={pos}
-                    dimensions={[1, 1, 1]}
-                    onCollect={handleCoalCollected}
+          <CollectibleProvider>
+            <Canvas camera={{ position: [0, 18, 5] }} shadows>
+              <Suspense>
+                <Physics gravity={[0, -20, 0]} colliders="cuboid" debug={false}>
+                  {coalPositions.generatedPositions.map((pos, index) => (
+                    <Coal
+                      key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                      id={index}
+                      position={pos}
+                      dimensions={[1, 1, 1]}
+                    />
+                  ))}
+                  {railsPositions.generatedPositions.map((pos, index) => (
+                    <Rails
+                      key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                      id={index}
+                      position={pos}
+                      // dimensions={[2.5, 2.5, 0.5]}
+                      onCollect={handleRailsCollected}
+                    />
+                  ))}
+                  <Train />
+                  <GameMap />
+                  <ambientLight intensity={0.3} color="white" />
+                  <directionalLight
+                    castShadow
+                    position={[10, 10, 10]}
+                    intensity={2}
+                    shadow-mapSize-width={1024}
+                    shadow-mapSize-height={1024}
                   />
-                ))}
-                {railsPositions.generatedPositions.map((pos, index) => (
-                  <Rails
-                    key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                    id={index}
-                    position={pos}
-                    // dimensions={[2.5, 2.5, 0.5]}
-                    onCollect={handleRailsCollected}
-                  />
-                ))}
-                <Train />
-                <GameMap />
-                <ambientLight intensity={0.3} color="white" />
-                <directionalLight
-                  castShadow
-                  position={[10, 10, 10]}
-                  intensity={2}
-                  shadow-mapSize-width={1024}
-                  shadow-mapSize-height={1024}
-                />
-              </Physics>
-            </Suspense>
-          </Canvas>
-          <UI coalCollected={coalCollected} railsCollected={railsCollected} />
+                </Physics>
+              </Suspense>
+            </Canvas>
+            <UI railsCollected={railsCollected} />
+          </CollectibleProvider>
         </PassengerProvider>
       </TrainProvider>
       <div id="public_chat" className="overlay bg-white">
