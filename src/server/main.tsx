@@ -65,7 +65,7 @@ ServerApp.use("*", cors()
 
 .get(
     '/ws',
-    upgradeWebSocket((c) => {
+    upgradeWebSocket(() => {
 
 
         return {
@@ -74,24 +74,37 @@ ServerApp.use("*", cors()
                 connected_ws_clients.set(ws, clientID)
 
                 console.log("WebSocket connection opened.")
+                broadcast({
+                    type: "update_player_count",
+                    data: { newCount: connected_ws_clients.size }
+                })
+                
+
             },
             onClose: (evt, ws) => {
                 connected_ws_clients.delete(ws)
                 console.log(`WebSocket connection closed. Total clients: ${connected_ws_clients.size}`)
-
+                broadcast({
+                    type: "update_player_count",
+                    data: { newCount: connected_ws_clients.size }
+                })
 
             },
             onMessage: (evt, ws) => {
                 const data = JSON.parse(evt.data.toString())
-                console.log("Received data:", data)
+                
                 if (data.type === "public_message") {
                     const publicMessageObject: DataObject = {
                         type: "public_message",
                         data: {
                             username: data.data.username,
-                            message: data.data.message
+                            message: data.data.message,
                         }
+                        
                     }
+
+                    publicMessageObject.data.username = publicMessageObject.data.username.trim().slice(0, 20)
+                    publicMessageObject.data.message = publicMessageObject.data.message.trim().slice(0, 140)
 
                     if (publicMessageObject.data.username.trim() === "") {
                         publicMessageObject.data.username = "Anonymous"
@@ -111,11 +124,18 @@ ServerApp.use("*", cors()
                                 type: "public_message",
                                 data: {
                                     username: publicMessageObject.data.username,
-                                    message: publicMessageObject.data.message
+                                    message: publicMessageObject.data.message,
                                 }
                             }))
                         }
                     })
+                } else if (data.type === "ping") {
+                    // Echo back to allow client to measure RTT
+                    const pongObject: DataObject = {
+                        type: "pong",
+                        data: { t0: data.data.t0 }
+                    }
+                    ws.send(JSON.stringify(pongObject))
                 }
             }
         }
@@ -141,10 +161,23 @@ server.on('listening',
 // server loop
 setInterval(() => {
     connected_ws_clients.forEach((clientID, ws) => {
-        // Send a heartbeat ping, and await their 
-    })
+        if (ws.readyState === WebSocket.OPEN) {
 
+            ws.send(JSON.stringify({ type: "heartbeat", data: null }))
+        }
+        void clientID;
+    })
 }, 3000)
+
+// Broadcast object to all connected clients
+function broadcast(data: DataObject) {
+    connected_ws_clients.forEach((clientID, ws) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(data))
+        }
+        void clientID;
+    });
+}
 
 
 

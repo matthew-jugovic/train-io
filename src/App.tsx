@@ -14,6 +14,7 @@ import { TrainProvider } from "./contexts/trainContext";
 import GameMap from "./components/GameMap";
 import Rails from "./components/Rails";
 import { PassengerProvider } from "./contexts/passengerContext";
+import { type DataObject } from "./client_server_share/Interfaces.tsx";
 
 const X_RANGE: Range = [-370, 370];
 const Y_RANGE: Range = [1, 1];
@@ -22,11 +23,20 @@ const Z_RANGE: Range = [-370, 370];
 function App() {
   const [coalCollected, setCoalCollected] = useState(0);
   const [railsCollected, setRailsCollected] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
   const [messages, setMessages] = useState<string[]>([]);
+  const [playersConnected, setPlayersConnected] = useState(0);
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [pingMs, setPingMs] = useState<number | null>(null);
+  const pingIntervalRef = useRef<number | null>(null);
+  const inFlightPingStartedAtRef = useRef<number | null>(null);
+
 
 
   const handleCoalCollected = () => {
@@ -75,7 +85,7 @@ function App() {
     };
   }, []);
 
-    const hasVisited = useRef(false)
+  const hasVisited = useRef(false)
   useEffect(() => {
     if (!hasVisited.current) {
 
@@ -87,8 +97,8 @@ function App() {
         .then(data => {
           setVisitorCount(data.visit_count);
         })
-      
-      // Load last five messages into React state (don’t mutate the DOM).
+
+      // Load last five messages into React state
       fetch("http://localhost:3000/public_chat_log")
         .then(res => res.json())
         .then((data: { username: string; message: string }[]) => {
@@ -99,63 +109,111 @@ function App() {
           console.error("Error fetching chat log:", err);
         });
     }
+  }, []);
 
+  useEffect(() => {
     const ws = new WebSocket("ws://localhost:3000/ws");
+    wsRef.current = ws;
+
     ws.onopen = () => {
-      console.log("WebSocket connection opened.");
-      const send_button_element = document.getElementById("public_chat_send")
-      const chat_input_element = document.getElementById("public_chat_input");
-      const username_input_element = document.getElementById("public_username");
+      setIsConnected(true);
+      if (pingIntervalRef.current != null) clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = window.setInterval(() => {
 
-      if (send_button_element && chat_input_element && username_input_element) {
+        if (ws.readyState !== WebSocket.OPEN) return;
 
-        function send_chat_message() {
-          const message = (chat_input_element as HTMLInputElement).value;
+        // Only send a new ping if none is in flight
+        if (inFlightPingStartedAtRef.current != null) return;
 
-          if (message.trim() === "") {
-            return;
+        const t0 = performance.now();
+        inFlightPingStartedAtRef.current = t0;
+        ws.send(JSON.stringify({ type: "ping", data: { t0 } }));
+        // Optional safety timeout
+        window.setTimeout(() => {
+          if (inFlightPingStartedAtRef.current === t0 && ws.readyState === WebSocket.OPEN) {
+            // Mark it as timed out so next interval can send a new one
+            inFlightPingStartedAtRef.current = null;
           }
-
-          ws.send(JSON.stringify({
-            type: "public_message",
-            data: {
-              username: username,
-              message: message
-            }
-          }));
-          
-          setChatMessage("");
-        }
-
-        send_button_element.addEventListener("click", () => {
-          send_chat_message()
-        });
-
-        addEventListener("keydown", (e) => {
-
-          if (e.code === "Enter") {
-            send_chat_message()
-          }
-        })
-      }
+        }, 10000);
+      }, 5000);
     };
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "public_message") {
-        const message = `${data.data.username}: ${data.data.message}`;
-        setMessages(prev => [...prev, message]);
+      const data: DataObject = JSON.parse(event.data);
+      switch (data.type) {
+        case "public_message": {
+          const { username, message } = data.data;
+          setMessages(prev => [...prev, `${username}: ${message}`]);
+          break;
+        }
+        case "pong": {
+          const { t0 } = data.data;
+          const started = inFlightPingStartedAtRef.current;
+          const end = performance.now();
+          let rtt: number;
+          if (started != null) {
+            rtt = end - started;
+          } else {
+
+            rtt = end - t0;
+          }
+          inFlightPingStartedAtRef.current = null;
+          setPingMs(prev => {
+            const next = Math.round(rtt);
+            return prev == null ? next : Math.round(prev * 0.6 + next * 0.4);
+          });
+          break;
+        }
+        case "update_player_count": {
+          setPlayersConnected(data.data.newCount);
+          break;
+        }
+        default:
+          break;
       }
+    };
+
+    ws.onclose = () => {
+      setIsConnected(false);
+      setPingMs(null);
+      if (pingIntervalRef.current != null) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      inFlightPingStartedAtRef.current = null;
+      console.log("WebSocket connection closed");
+
+      
+
+
     }
-
-
-
 
     return () => {
-      ws.close()
-      console.log("WebSocket connection closed.");
-    }
+      if (pingIntervalRef.current != null) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      inFlightPingStartedAtRef.current = null;
+      ws.close();
+      wsRef.current = null;
+    };
   }, []);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!chatMessage.trim()) return;
+    wsRef.current?.send(JSON.stringify({
+      type: "public_message",
+      data: { username: username.trim(), message: chatMessage }
+    }));
+    setChatMessage("");
+  };
 
   return (
     <div className="relative w-screen h-screen">
@@ -198,21 +256,48 @@ function App() {
           <UI coalCollected={coalCollected} railsCollected={railsCollected} />
         </PassengerProvider>
       </TrainProvider>
+      <div id="notification-parent" className={`absolute top-4 px-4 w-full z-5000`}>
+        <div id="disconnected-message" className={`bg-gradient-to-b from-gray-900/80 to-gray-950/80 backdrop-blur-sm rounded-lg p-3 text-white shadow-lg text-center comic-text transition-opacity ease-out duration-750 ${isConnected ? "opacity-0" : "opacity-100"}`}>
+          You have been Disconnected.
+        </div>
+      </div>
       <div
         id="public_chat"
-        className="absolute bottom-5 right-5 z-10 w-[360px] h-[260px] rounded-lg p-3 text-white
+        className="absolute bottom-5 right-5 z-10 w-160 h-80 rounded-lg p-3 text-white
                    bg-gradient-to-t from-gray-900/70 to-gray-900/20 backdrop-blur-sm shadow-lg
-                   flex flex-col"
+                   flex flex-col comic-text"
       >
-        <p id="visitor_count">
-          {visitorCount !== null ? `Visitor Count: ${visitorCount}` : "..."}
-        </p>
+        <div id="client_stats" className="grid grid-cols-3 gap-2 text-sm">
+          <div className="rounded bg-white/10 text-center px-2 py-1">
+            <p id="client_visit_count">
+              {`Visitor Count: ${visitorCount !== null ? visitorCount : "..."}`}
+            </p>
+          </div>
+          <div className="rounded bg-white/10 text-center px-2 py-1">
+            <p id="client_ping_ms">
+              {`Ping: ${pingMs !== null ? pingMs : "..."} ms`}
+            </p>
+          </div>
+          <div className="rounded bg-white/10 text-center px-2 py-1">
+            <p id="client_players_connected">
+              {`Players: ${playersConnected}`}
+            </p>
+          </div>
+        </div>
 
         {/* Messages fill from bottom upward */}
-        <div className="mt-2 h-40 overflow-y-auto flex flex-col justify-end space-y-1">
-          {messages.map((m, i) => (
-            <p key={i} className="whitespace-pre-wrap text-sm">{m}</p>
-          ))}
+        <div
+          className="mt-2 min-h-0 flex-1 overflow-y-scroll overflow-x-hidden flex flex-col space-y-0 pr-2 chat_scrollbar"
+          ref={messagesContainerRef}
+        >
+          {messages.map((m, i) => {
+            const baseClass = "whitespace-pre-wrap break-words text-sm pl-2";
+            if (i % 2 === 0) {
+              return (<p key={i} className={`${baseClass} bg-black/40`}>{m}</p>)
+            } else {
+              return (<p key={i} className={`${baseClass} bg-black/20`}>{m}</p>)
+            }
+          })}
         </div>
 
         <input
@@ -221,7 +306,10 @@ function App() {
           placeholder="Enter your name..."
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="mt-2 w-full rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60"
+          maxLength={20}
+          className={`mt-2 w-full rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={!isConnected}
+
         />
         <div className="mt-2 flex gap-2">
           <input
@@ -230,9 +318,16 @@ function App() {
             placeholder="Type your message here..."
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
-            className="flex-1 rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60"
+            maxLength={140}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            className={`flex-1 rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
           />
-          <button id="public_chat_send" className="rounded bg-blue-500/80 hover:bg-blue-500 px-3 text-white">
+          <button
+            id="public_chat_send"
+            className={`rounded bg-blue-500/80 hover:bg-blue-500 px-3 text-white ${username.trim() === "" || chatMessage.trim() === "" || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={!username.trim() || !chatMessage.trim() || !isConnected}
+            onClick={handleSend}
+          >
             Send
           </button>
         </div>

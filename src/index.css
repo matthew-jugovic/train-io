@@ -3,3 +3,18 @@
 body {
   margin: 0
 }
+
+/* Shared base for both classes (Firefox static colors) */
+.chat_scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-blue-300) transparent;
+}
+
+@font-face {
+  font-family: "Comic Code Ligatures";
+  src: url("https://files.catbox.moe/71uu63.otf");
+}
+
+.comic-text {
+  font-family: "Comic Code Ligatures";
+}
