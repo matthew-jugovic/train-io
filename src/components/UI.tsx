@@ -3,7 +3,6 @@ import { TrainContext } from "../contexts/trainContext";
 import { PassengerContext } from "../contexts/passengerContext";
 import { CollectibleContext } from "../contexts/collectibleContext";
 import "./UI.css";
-import { color } from "three/src/nodes/TSL.js";
 
 type UIProps = {
   railsCollected: number;
@@ -23,8 +22,9 @@ export default function UI({ railsCollected }: UIProps) {
   }
 
   const { carCount, addCar, removeCar } = trainManager;
-  const { passengers, maxPassengers, money } = passengerManager;
+  const { passengers, maxPassengers, money, setMoney } = passengerManager;
   const { coalNum, maxCoal } = collectibleManager;
+
   // Count passengers per destination
   const destinations: Record<string, number> = {};
   passengers.forEach((p) => {
@@ -32,15 +32,19 @@ export default function UI({ railsCollected }: UIProps) {
   });
 
   const coalPercentage = Math.min((coalNum / maxCoal) * 100, 100);
+  const [shopOpen, setShopOpen] = useState(false);
 
   return (
     <div className="UIElements">
       <div className="UI">
-        <div className="UI-left">
+        <div className="UI-left" style={{ width: 320 }}>
           <div>Rails Collected: {railsCollected}</div>
-          <div style={{ marginTop: 20 }}>Train Size: {carCount}</div>
+          <div style={{ marginTop: 10 }}>Train Size: {carCount}</div>
           <div style={{ marginTop: 10 }}>
-            <button onClick={addCar}>Add Car</button>
+            {/* <button onClick={() => addCar("coal")}>Add Coal Car</button>
+            <button onClick={() => addCar("passenger")}>
+              Add Passenger Car
+            </button> */}
             <button style={{ background: "red" }} onClick={removeCar}>
               Remove Car
             </button>
@@ -63,6 +67,45 @@ export default function UI({ railsCollected }: UIProps) {
             </ul>
           </div>
         </div>
+        <strong className="shop-container">
+          <button onClick={() => setShopOpen(true)}>Shop</button>
+
+          {shopOpen && (
+            <div className="shop-ui">
+              <div className="shop-content">
+                <h2>Train Shop</h2>
+                <p>Purchase Train Cars!</p>
+
+                <button
+                  onClick={() => {
+                    if (money >= 15) {
+                      addCar("coal");
+                      setMoney(money - 15);
+                    }
+                  }}
+                >
+                  Buy Coal Car - $15
+                </button>
+                <button
+                  onClick={() => {
+                    if (money >= 20) {
+                      addCar("passenger");
+                      setMoney(money - 20);
+                    }
+                  }}
+                >
+                  Buy Passenger Car - $20
+                </button>
+                <button
+                  style={{ background: "red" }}
+                  onClick={() => setShopOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </strong>
       </div>
 
       <div className="UI-money">

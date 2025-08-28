@@ -21,7 +21,7 @@ function TrainModel() {
   return (
     <primitive
       object={trainModel.scene}
-      scale={0.008}
+      scale={[0.0085, 0.0085, 0.0087]}
       position={[0, -1, 0]}
       rotation={[0, Math.PI, 0]}
     />
@@ -132,7 +132,7 @@ function Train() {
     const trainPos = vec3(trainRef.current.translation());
     camera.position.set(
       trainPos.x + 15 + trainManager.carCount * 2,
-      trainPos.y + 30 + trainManager.carCount * 4,
+      trainPos.y + 25 + trainManager.carCount * 4,
       trainPos.z
     );
     camera.lookAt(trainPos);
@@ -154,7 +154,7 @@ function Train() {
 
           <TrainModel />
         </RigidBody>
-        {trainManager?.trainCars}
+        {trainManager?.trainCars.map((car) => car.railcar)}
         {trainManager?.joints}
       </group>
       <TrainWhistleController moving={isMoving} />

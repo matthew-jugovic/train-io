@@ -1,4 +1,11 @@
-import React, { createContext, useState, useCallback, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useCallback,
+  useEffect,
+  useContext,
+} from "react";
+import { TrainContext } from "./trainContext";
 
 type Passenger = {
   destination: string;
@@ -6,7 +13,7 @@ type Passenger = {
 
 export type PassengersContextType = {
   money: number;
-  addMoney: (amount: number) => void;
+  setMoney: (amount: number) => void;
   passengers: Passenger[];
   maxPassengers: number;
   addPassenger: (fromStation: string) => void;
@@ -20,13 +27,18 @@ export const PassengerContext = createContext<PassengersContextType | null>(
 );
 
 export const PassengerProvider: React.FC<{
-  maxPassengers: number;
   children: React.ReactNode;
-}> = ({ maxPassengers, children }) => {
+}> = ({ children }) => {
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [stations, setStations] = useState<string[]>([]);
+
   const [money, setMoney] = useState(0);
-  const addMoney = (amount: number) => setMoney((prev) => prev + amount);
+
+  const trainManager = useContext(TrainContext);
+  if (!trainManager) throw new Error("TrainContext must be available");
+
+  const { totalPassengerCapacity } = trainManager;
+  const maxPassengers = totalPassengerCapacity;
 
   useEffect(() => {
     console.log("PassengerContext mounted");
@@ -79,7 +91,7 @@ export const PassengerProvider: React.FC<{
     <PassengerContext.Provider
       value={{
         money,
-        addMoney,
+        setMoney,
         passengers,
         maxPassengers,
         addPassenger,

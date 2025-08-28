@@ -35,7 +35,7 @@ export default function Station({ stationMesh }: StationProps) {
 
     const interval = setInterval(() => {
       addPassenger(stationMesh.name);
-    }, 200);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [insideZone, addPassenger, stationMesh.name]);

@@ -25,7 +25,7 @@ export default function GameMap() {
 
   return (
     <>
-      <RigidBody type="fixed" colliders="hull">
+      <RigidBody type="fixed" colliders="trimesh">
         <primitive object={scene} position={[0, 0, 0]} />
       </RigidBody>
 

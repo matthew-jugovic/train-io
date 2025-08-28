@@ -26,9 +26,8 @@ export const CollectibleProvider = ({ children }: Props) => {
   const trainManager = useContext(TrainContext);
   if (!trainManager) throw new Error("TrainContext must be available");
 
-  const { carCount } = trainManager;
-  const coalPerCar = 10;
-  const maxCoal = carCount * coalPerCar;
+  const { totalCoalCapacity } = trainManager;
+  const maxCoal = totalCoalCapacity;
   const coalRef = useRef(0);
   const [coalNum, setCoalNum] = useState(0);
 
@@ -41,9 +40,9 @@ export const CollectibleProvider = ({ children }: Props) => {
 
   const addCoal = useCallback(
     (amount: number) => {
-      coalRef.current = Math.min(coalRef.current + amount, maxCoal);
+      coalRef.current = Math.min(coalRef.current + amount, totalCoalCapacity);
     },
-    [maxCoal]
+    [totalCoalCapacity]
   );
 
   const consumeCoal = useCallback((amount: number) => {

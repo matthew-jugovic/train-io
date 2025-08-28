@@ -128,7 +128,7 @@ function App() {
   return (
     <div id="canvas-container">
       <TrainProvider>
-        <PassengerProvider maxPassengers={20}>
+        <PassengerProvider>
           <CollectibleProvider>
             <Canvas camera={{ position: [0, 18, 5] }} shadows>
               <Suspense>
