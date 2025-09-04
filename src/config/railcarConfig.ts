@@ -15,7 +15,7 @@ export const railcarConfig = {
     model: "/PassengerCar.glb",
     carPosition: [0, 0.45, 0] as [number, number, number],
     scale: [0.9, 0.9, 0.9] as [number, number, number],
-    collider: { args: [1.2, 1, 4] as CuboidArgs },
+    collider: { args: [1.2, 1, 3.8] as CuboidArgs },
     stats: {
       coalCapacity: 0,
       passengerCapacity: 20,

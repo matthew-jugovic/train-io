@@ -62,15 +62,15 @@ function App() {
     railsPositions.generatePositions();
   }, [railsPositions.generatePositions]);
 
-  useEffect(() => {
-    const gui = new GUI();
-    gui.add(CONSTANTS, "speed", 0, 10000, 1);
-    gui.add(CONSTANTS, "turn_speed", 0, 100, 1);
+  // useEffect(() => {
+  //   const gui = new GUI();
+  //   gui.add(CONSTANTS, "speed", 0, 10000, 1);
+  //   gui.add(CONSTANTS, "turn_speed", 0, 100, 1);
 
-    return () => {
-      gui.destroy();
-    };
-  }, []);
+  //   return () => {
+  //     gui.destroy();
+  //   };
+  // }, []);
 
   const hasVisited = useRef(false);
   useEffect(() => {
