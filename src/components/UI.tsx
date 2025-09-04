@@ -12,7 +12,8 @@ export default function UI({ railsCollected }: UIProps) {
   const trainManager = useContext(TrainContext);
   const passengerManager = useContext(PassengerContext);
   const collectibleManager = useContext(CollectibleContext);
-
+  const coalCarCost = 5;
+  const passengerCarCost = 5;
   if (!trainManager || !passengerManager || !collectibleManager) {
     return (
       <div className="UI">
@@ -78,23 +79,23 @@ export default function UI({ railsCollected }: UIProps) {
 
                 <button
                   onClick={() => {
-                    if (money >= 15) {
+                    if (money >= coalCarCost) {
                       addCar("coal");
-                      setMoney(money - 15);
+                      setMoney(money - coalCarCost);
                     }
                   }}
                 >
-                  Buy Coal Car - $15
+                  Buy Coal Car - ${coalCarCost}
                 </button>
                 <button
                   onClick={() => {
-                    if (money >= 20) {
+                    if (money >= passengerCarCost) {
                       addCar("passenger");
-                      setMoney(money - 20);
+                      setMoney(money - passengerCarCost);
                     }
                   }}
                 >
-                  Buy Passenger Car - $20
+                  Buy Passenger Car - ${passengerCarCost}
                 </button>
                 <button
                   style={{ background: "red" }}
