@@ -24,6 +24,8 @@ function App() {
   const [coalCollected, setCoalCollected] = useState(0);
   const [railsCollected, setRailsCollected] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [discordToken, setDiscordToken] = useState<string | null>(null);
+  const [discordUser, setDiscordUser] = useState<{ id: string; username: string } | null>(null);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
@@ -108,8 +110,38 @@ function App() {
         .catch(err => {
           console.error("Error fetching chat log:", err);
         });
+
+      // Discord auth
+      const handleDiscordAuth = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+
+        if (code) {
+          try {
+            const response = await fetch("http://localhost:3000/auth/discord/login", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ auth: code }),
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to authenticate with Discord");
+            }
+
+            const data = await response.json();
+            setUsername(data.username || "Anonymous");
+          } catch (error) {
+            console.error("Discord authentication error:", error);
+          }
+        }
+      };
+
+      handleDiscordAuth();
     }
   }, []);
+
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:3000/ws");
@@ -183,7 +215,7 @@ function App() {
       inFlightPingStartedAtRef.current = null;
       console.log("WebSocket connection closed");
 
-      
+
 
 
     }
@@ -257,9 +289,17 @@ function App() {
         </PassengerProvider>
       </TrainProvider>
       <div id="notification-parent" className={`absolute top-4 px-4 w-full z-5000`}>
-        <div id="disconnected-message" className={`bg-gradient-to-b from-gray-900/80 to-gray-950/80 backdrop-blur-sm rounded-lg p-3 text-white shadow-lg text-center comic-text transition-opacity ease-out duration-750 ${isConnected ? "opacity-0" : "opacity-100"}`}>
+        <div id="disconnected-message" className={`bg-gradient-to-b from-red-900/80 to-red-950/80 backdrop-blur-sm rounded-lg p-3 text-white shadow-lg text-center comic-text transition-opacity ease-out duration-750 ${isConnected ? "opacity-0" : "opacity-100"}`}>
           You have been Disconnected.
         </div>
+      </div>
+      <div id="user_info_holder" className="absolute bottom-5 left-5 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg">
+        <a
+          href="https://discord.com/oauth2/authorize?client_id=1394155656214347806&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fdiscord%2Flogin&scope=email+identify"
+          className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
+        >
+          Login with Discord
+        </a>
       </div>
       <div
         id="public_chat"
@@ -321,6 +361,7 @@ function App() {
             maxLength={140}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             className={`flex-1 rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={!isConnected}
           />
           <button
             id="public_chat_send"
