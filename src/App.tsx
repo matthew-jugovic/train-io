@@ -1,12 +1,10 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState, Suspense, useRef } from "react";
-import { GUI } from "lil-gui";
 import {
   useRandomlyGeneratedPositions,
   type Range,
 } from "./hooks/useRandomlyGeneratedPositions";
 import Train from "./components/Train";
-import CONSTANTS from "./constants/trainConstants";
 import { Physics } from "@react-three/rapier";
 import UI from "./components/UI";
 import Coal from "./components/Coal";

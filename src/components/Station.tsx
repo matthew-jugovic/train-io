@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { RigidBody, RapierRigidBody } from "@react-three/rapier";
 import { Euler, Object3D, Quaternion, Vector3 } from "three";
 import { PassengerContext } from "../contexts/passengerContext";

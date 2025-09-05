@@ -1,10 +1,4 @@
-import {
-  quat,
-  RapierRigidBody,
-  RigidBody,
-  useSphericalJoint,
-  vec3,
-} from "@react-three/rapier";
+import { RapierRigidBody, useSphericalJoint } from "@react-three/rapier";
 import type { RefObject } from "react";
 const cartLength = 6;
 const gap = 2.3;

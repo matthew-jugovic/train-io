@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { TrainContext } from "../contexts/trainContext";
 import { PassengerContext } from "../contexts/passengerContext";
 import { CollectibleContext } from "../contexts/collectibleContext";
