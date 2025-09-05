@@ -265,7 +265,7 @@ function App() {
       </TrainProvider>
       <div
         id="notification-parent"
-        className={`absolute top-15 px-4 w-full z-1`}
+        className={`absolute  top-46 px-4 w-85 z-1`}
       >
         <div
           id="disconnected-message"
@@ -278,7 +278,7 @@ function App() {
       </div>
       <div
         id="public_chat"
-        className="absolute bottom-5 right-5 z-10 w-160 h-80 rounded-lg p-3 text-white
+        className="absolute bottom-5 right-5 z-10 w-120 h-70 rounded-lg p-3 text-white
                    bg-gradient-to-t from-gray-900/70 to-gray-900/20 backdrop-blur-sm shadow-lg
                    flex flex-col comic-text"
       >
