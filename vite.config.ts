@@ -10,7 +10,6 @@ export default defineConfig({
     sourcemap: true, // Generate source maps
   },
   server: {
-    host: "0.0.0.0",
     watch: {
       ignored: ["**/src/server/**"],
     },
