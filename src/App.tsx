@@ -267,7 +267,7 @@ function App() {
       </TrainProvider>
       <div
         id="notification-parent"
-        className={`absolute top-4 px-4 w-full z-5000`}
+        className={`absolute top-15 px-4 w-full z-1`}
       >
         <div
           id="disconnected-message"

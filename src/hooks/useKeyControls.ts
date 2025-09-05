@@ -1,12 +1,4 @@
-import { useEffect, useState } from "react";
-
-const isTypingInInput = (el: Element | null): boolean => {
-  if (!el) return false;
-  const target = el as HTMLElement;
-  if (target.isContentEditable) return true;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-};
+import { useEffect, useRef } from "react";
 
 type KeysState = {
   w: boolean;
@@ -24,6 +16,14 @@ export const useKeyControls = () => {
     d: false,
     space: false,
   });
+
+  const isTypingInInput = (el: Element | null): boolean => {
+    if (!el) return false;
+    const target = el as HTMLElement;
+    if (target.isContentEditable) return true;
+    const tag = target.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  };
 
   useEffect(() => {
     const codeMap: Record<string, keyof KeysState> = {
