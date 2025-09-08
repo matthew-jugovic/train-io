@@ -73,6 +73,48 @@ ServerApp.use("*", cors())
       .limit(5);
     return c.json(chatLog.reverse()); // Reverse to show the oldest messages first
   })
+  .post("/auth/discord/login", async (c) => {
+    // Get code from JSON body
+    const data = await c.req.json();
+    const gotCode = data.auth as string;
+    console.log(`Got code ${gotCode}.`);
+
+    const params = new URLSearchParams({
+      client_id: process.env.DISCORD_APPLICATION_ID || "",
+      client_secret: process.env.DISCORD_SECRET || "",
+      grant_type: "authorization_code",
+      code: gotCode,
+      redirect_uri: "http://localhost:5173/auth/discord/login",
+    });
+
+    const discordResponse = await fetch(
+      "https://discord.com/api/oauth2/token",
+      {
+        method: "POST",
+        body: params.toString(),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    if (!discordResponse.ok) {
+      console.log(await discordResponse.json());
+      return c.notFound();
+    }
+
+    const tokenData = await discordResponse.json();
+    const discordAccessToken = tokenData.access_token as string;
+
+    console.log(tokenData);
+    const output = await (
+      await fetch("https://discord.com/api/v10/users/@me", {
+        headers: { Authorization: `Bearer ${discordAccessToken}` },
+      })
+    ).json();
+    console.log(output);
+    return c.json({ username: output.username });
+  })
 
   .get(
     "/ws",

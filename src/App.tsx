@@ -22,6 +22,11 @@ const Z_RANGE: Range = [-370, 370];
 function App() {
   const [railsCollected, setRailsCollected] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [discordToken, setDiscordToken] = useState<string | null>(null);
+  const [discordUser, setDiscordUser] = useState<{
+    id: string;
+    username: string;
+  } | null>(null);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
@@ -113,6 +118,38 @@ function App() {
         .catch((err) => {
           console.error("Error fetching chat log:", err);
         });
+
+      // Discord auth
+      const handleDiscordAuth = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+
+        if (code) {
+          try {
+            const response = await fetch(
+              "http://localhost:3000/auth/discord/login",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ auth: code }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error("Failed to authenticate with Discord");
+            }
+
+            const data = await response.json();
+            setUsername(data.username || "Anonymous");
+          } catch (error) {
+            console.error("Discord authentication error:", error);
+          }
+        }
+      };
+
+      handleDiscordAuth();
     }
   }, []);
 
@@ -275,6 +312,17 @@ function App() {
         >
           You have been Disconnected.
         </div>
+      </div>
+      <div
+        id="user_info_holder"
+        className="absolute bottom-5 left-5 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
+      >
+        <a
+          href="https://discord.com/oauth2/authorize?client_id=1394155656214347806&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fdiscord%2Flogin&scope=email+identify"
+          className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
+        >
+          Login with Discord
+        </a>
       </div>
       <div
         id="public_chat"
