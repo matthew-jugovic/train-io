@@ -113,14 +113,14 @@ function Train() {
       );
     }
 
-    const velocity = trainRef.current.linvel();
-    const speed = Math.sqrt(
-      velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
-    );
-    const currentlyMoving = speed > 0.5 || w || a || s || d;
-    if (currentlyMoving !== isMoving) {
-      setIsMoving(currentlyMoving);
-    }
+    // const velocity = trainRef.current.linvel();
+    // const speed = Math.sqrt(
+    //   velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
+    // );
+    // const currentlyMoving = speed > 0.5 || w || a || s || d;
+    // if (currentlyMoving !== isMoving) {
+    //   setIsMoving(currentlyMoving);
+    // }
 
     // Clamp rotation
     clampRotation(trainRef.current, 20);

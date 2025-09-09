@@ -315,7 +315,7 @@ function App() {
       </div>
       <div
         id="user_info_holder"
-        className="absolute bottom-5 left-5 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
+        className="absolute bottom-2 left-40 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
       >
         <a
           href="https://discord.com/oauth2/authorize?client_id=1394155656214347806&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fdiscord%2Flogin&scope=email+identify"

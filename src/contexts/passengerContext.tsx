@@ -29,6 +29,7 @@ export const PassengerContext = createContext<PassengersContextType | null>(
 export const PassengerProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
+  const audio = new Audio("/woodenTrainWhistle.mp3");
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [stations, setStations] = useState<string[]>([]);
 
@@ -79,6 +80,7 @@ export const PassengerProvider: React.FC<{
         if (deliveredCount > 0) {
           setMoney(() => money + deliveredCount);
           console.log(`Dropped off ${deliveredCount} passenger(s)`);
+          playWhistle();
         }
 
         return remaining;
@@ -86,6 +88,11 @@ export const PassengerProvider: React.FC<{
     },
     [money]
   );
+
+  const playWhistle = useCallback(() => {
+    audio.currentTime = 12;
+    audio.play();
+  }, []);
 
   return (
     <PassengerContext.Provider
