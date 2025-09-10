@@ -19,17 +19,22 @@ const X_RANGE: Range = [-370, 370];
 const Y_RANGE: Range = [1, 1];
 const Z_RANGE: Range = [-370, 370];
 
+interface ChatMessage {
+  username: string;
+  message: string;
+  discord: boolean;
+}
+
 function App() {
   const [railsCollected, setRailsCollected] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [discordToken, setDiscordToken] = useState<string | null>(null);
-  const [discordResetToken, setDiscordResetToken] = useState<string | null>(null);
   const [discordLogin, setDiscordLogin] = useState<boolean>(false);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [playersConnected, setPlayersConnected] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -109,9 +114,9 @@ function App() {
       // Load last five messages into React state
       fetch(`${import.meta.env.VITE_SERVER_URL}/public_chat_log`)
         .then((res) => res.json())
-        .then((data: { username: string; message: string }[]) => {
+        .then((data: { username: string; message: string; discord_id?: number }[]) => {
           console.log("Fetched chat log:", data);
-          setMessages(data.map((msg) => `${msg.username}: ${msg.message}`));
+          setMessages(data.map((msg) => ({ username: msg.username, message: msg.message, discord: msg.discord_id ? true : false })));
         })
         .catch((err) => {
           console.error("Error fetching chat log:", err);
@@ -139,16 +144,38 @@ function App() {
               throw new Error("Failed to authenticate with Discord");
             }
 
-            // We got the discord token.
+            // We got the session token.
             const data = await response.json();
             
-            setDiscordToken(data.access_token)
-            setDiscordResetToken(data.refresh_token)
-            setUsername(data.username)
+            setUsername(data.username);
+            setDiscordToken(data.session_token);
+            setDiscordLogin(true);
+            console.log("Discord authentication successful, session token received.");
+
+            // Clear the code param from URL
+            window.history.replaceState({}, document.title, "/");
+
+            // Set session cookie
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + 1);
+            document.cookie = `sessionToken=${data.session_token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=strict`;
+            console.log(`Set sessionToken cookie: ${data.session_token}`);
+
+            // Send the session token to server if WebSocket is open
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              const data_object = { type: "session_auth", data: { session_token: data.session_token } } as DataObject;
+              wsRef.current.send(JSON.stringify(data_object));
+              console.log("Sent session token to server via WebSocket.");
+            }
+
+            
 
           } catch (error) {
             console.error("Discord authentication error:", error);
           }
+
+          // replace with base url
+          // window.history.replaceState({}, document.title, "/");
         }
       };
 
@@ -176,7 +203,8 @@ function App() {
 
         // If we have the discord token, send it to server for this session
         if (discordToken && !discordLogin) {
-          ws.send(JSON.stringify({ type: "discord_auth", data: { access_token: discordToken, reset_token: discordToken }} as DataObject))
+          const data_object = { type: "discord_auth", data: { discord_token: discordToken}} as DataObject
+          ws.send(JSON.stringify(data_object))
           setDiscordLogin(true)
         }
 
@@ -193,7 +221,17 @@ function App() {
         }, 10000);
       }, 5000);
 
-      
+      // If we have a session token cookie, send it to server for this session
+      const session_token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("sessionToken="))
+        ?.split("=")[1]
+
+      const data_object = {
+        type: "session_auth",
+        data: { session_token: session_token ?? "" },
+      } as DataObject;
+      ws.send(JSON.stringify(data_object))
       
 
       
@@ -206,7 +244,7 @@ function App() {
       switch (data.type) {
         case "public_message": {
           const { username, message } = data.data;
-          setMessages((prev) => [...prev, `${username}: ${message}`]);
+          setMessages((prev) => [...prev, { username, message, discord: data.data.discord }]);
           break;
         }
         case "pong": {
@@ -233,6 +271,13 @@ function App() {
         case "heartbeat": {
           const data_object: DataObject = { type: "heartbeat" };
           ws.send(JSON.stringify(data_object));
+          break;
+        }
+        case "session_auth": {
+          const expirationDate = new Date();
+          expirationDate.setDate(expirationDate.getDate() + 1);
+          document.cookie = `sessionToken=${data.data.session_token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=strict`;
+          console.log(`Set sessionToken cookie: ${data.data.session_token}`);
           break;
         }
         default:
@@ -340,12 +385,16 @@ function App() {
         id="user_info_holder"
         className="absolute bottom-2 left-40 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
       >
-        <a
-          href={import.meta.env.VITE_DISCORD_REDIRECT_URL}
-          className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
-        >
-          Login with Discord
-        </a>
+        {discordLogin ? (
+          <p className="text-white comic-text">Welcome, {username}!</p>
+        ) : (
+          <a
+            href={import.meta.env.VITE_DISCORD_REDIRECT_URL}
+            className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
+          >
+            Login with Discord
+          </a>
+        )}
       </div>
       <div
         id="public_chat"
@@ -378,19 +427,13 @@ function App() {
         >
           {messages.map((m, i) => {
             const baseClass = "whitespace-pre-wrap break-words text-sm pl-2";
-            if (i % 2 === 0) {
-              return (
-                <p key={i} className={`${baseClass} bg-black/40`}>
-                  {m}
-                </p>
-              );
-            } else {
-              return (
-                <p key={i} className={`${baseClass} bg-black/20`}>
-                  {m}
-                </p>
-              );
-            }
+            const bgClass = i % 2 === 0 ? "bg-black/40" : "bg-black/20";
+            const usernameClass = m.discord ? "text-blue-400 font-bold drop-shadow-lg" : "text-white";
+            return (
+              <p key={i} className={`${baseClass} ${bgClass}`}>
+                <span className={usernameClass}>{m.username}:</span> {m.message}
+              </p>
+            );
           })}
         </div>
 
@@ -401,10 +444,10 @@ function App() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           maxLength={20}
-          className={`mt-2 w-full rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${
+          className={`mt-2 w-full rounded ${discordLogin ? 'bg-blue-500/80' : 'bg-white/10'} border border-white/20 px-2 py-1 placeholder-white/60 ${
             !isConnected ? "opacity-50 cursor-not-allowed" : ""
           }`}
-          disabled={!isConnected}
+          disabled={!isConnected || discordLogin}
         />
         <div className="mt-2 flex gap-2">
           <input

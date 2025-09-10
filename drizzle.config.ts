@@ -2,7 +2,7 @@ import "@dotenvx/dotenvx"
 import { defineConfig } from 'drizzle-kit'
 import dotenvx from "@dotenvx/dotenvx"
 
-dotenvx.config({ path: "./secrets.env" })
+dotenvx.config({ path: "./.env.local" })
 
 export default defineConfig({
     out: './drizzle',
