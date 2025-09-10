@@ -1,12 +1,10 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState, Suspense, useRef } from "react";
-import { GUI } from "lil-gui";
 import {
   useRandomlyGeneratedPositions,
   type Range,
 } from "./hooks/useRandomlyGeneratedPositions";
 import Train from "./components/Train";
-import CONSTANTS from "./constants/trainConstants";
 import { Physics } from "@react-three/rapier";
 import UI from "./components/UI";
 import Coal from "./components/Coal";
@@ -15,13 +13,13 @@ import GameMap from "./components/GameMap";
 import Rails from "./components/Rails";
 import { PassengerProvider } from "./contexts/passengerContext";
 import { type DataObject } from "./client_server_share/Interfaces.tsx";
+import { CollectibleProvider } from "./contexts/collectibleContext";
 
 const X_RANGE: Range = [-370, 370];
 const Y_RANGE: Range = [1, 1];
 const Z_RANGE: Range = [-370, 370];
 
 function App() {
-  const [coalCollected, setCoalCollected] = useState(0);
   const [railsCollected, setRailsCollected] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [discordToken, setDiscordToken] = useState<string | null>(null);
@@ -39,12 +37,6 @@ function App() {
   const [pingMs, setPingMs] = useState<number | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const inFlightPingStartedAtRef = useRef<number | null>(null);
-
-
-
-  const handleCoalCollected = () => {
-    setCoalCollected((count) => count + 1);
-  };
 
   const handleRailsCollected = () => {
     setRailsCollected((count) => count + 5);
@@ -76,39 +68,52 @@ function App() {
 
   useEffect(() => {
     coalPositions.generatePositions();
-  }, []);
+  }, [coalPositions.generatePositions]);
 
   useEffect(() => {
-    const gui = new GUI();
-    gui.add(CONSTANTS, "speed", 0, 10000, 1);
-    gui.add(CONSTANTS, "turn_speed", 0, 100, 1);
+    railsPositions.generatePositions();
+  }, [railsPositions.generatePositions]);
 
-    return () => {
-      gui.destroy();
-    };
-  }, []);
+  // useEffect(() => {
+  //   const gui = new GUI();
+  //   gui.add(CONSTANTS, "speed", 0, 10000, 1);
+  //   gui.add(CONSTANTS, "turn_speed", 0, 100, 1);
 
-  const hasVisited = useRef(false)
+  //   return () => {
+  //     gui.destroy();
+  //   };
+  // }, []);
+
+  // useEffect(() => {
+  //   const gui = new GUI();
+  //   gui.add(CONSTANTS, "speed", 0, 10000, 1);
+  //   gui.add(CONSTANTS, "turn_speed", 0, 100, 1);
+
+  //   return () => {
+  //     gui.destroy();
+  //   };
+  // }, []);
+
+  const hasVisited = useRef(false);
   useEffect(() => {
     if (!hasVisited.current) {
-
-      hasVisited.current = true
+      hasVisited.current = true;
       fetch("http://localhost:3000/visit", {
         method: "POST",
       })
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           setVisitorCount(data.visit_count);
-        })
+        });
 
       // Load last five messages into React state
       fetch("http://localhost:3000/public_chat_log")
-        .then(res => res.json())
+        .then((res) => res.json())
         .then((data: { username: string; message: string }[]) => {
           console.log("Fetched chat log:", data);
           setMessages(data.map((msg) => `${msg.username}: ${msg.message}`));
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error fetching chat log:", err);
         });
 
@@ -119,13 +124,16 @@ function App() {
 
         if (code) {
           try {
-            const response = await fetch("http://localhost:3000/auth/discord/login", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ auth: code }),
-            });
+            const response = await fetch(
+              "http://localhost:3000/auth/discord/login",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ auth: code }),
+              }
+            );
 
             if (!response.ok) {
               throw new Error("Failed to authenticate with Discord");
@@ -148,16 +156,15 @@ function App() {
     }
   }, []);
 
-
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:3000/ws");
     wsRef.current = ws;
 
     ws.onopen = () => {
       setIsConnected(true);
-      if (pingIntervalRef.current != null) clearInterval(pingIntervalRef.current);
+      if (pingIntervalRef.current != null)
+        clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = window.setInterval(() => {
-
         if (ws.readyState !== WebSocket.OPEN) return;
 
         // Only send a new ping if none is in flight
@@ -176,7 +183,10 @@ function App() {
 
         // Optional safety timeout
         window.setTimeout(() => {
-          if (inFlightPingStartedAtRef.current === t0 && ws.readyState === WebSocket.OPEN) {
+          if (
+            inFlightPingStartedAtRef.current === t0 &&
+            ws.readyState === WebSocket.OPEN
+          ) {
             // Mark it as timed out so next interval can send a new one
             inFlightPingStartedAtRef.current = null;
           }
@@ -196,7 +206,7 @@ function App() {
       switch (data.type) {
         case "public_message": {
           const { username, message } = data.data;
-          setMessages(prev => [...prev, `${username}: ${message}`]);
+          setMessages((prev) => [...prev, `${username}: ${message}`]);
           break;
         }
         case "pong": {
@@ -207,11 +217,10 @@ function App() {
           if (started != null) {
             rtt = end - started;
           } else {
-
             rtt = end - t0;
           }
           inFlightPingStartedAtRef.current = null;
-          setPingMs(prev => {
+          setPingMs((prev) => {
             const next = Math.round(rtt);
             return prev == null ? next : Math.round(prev * 0.6 + next * 0.4);
           });
@@ -240,11 +249,7 @@ function App() {
       }
       inFlightPingStartedAtRef.current = null;
       console.log("WebSocket connection closed");
-
-
-
-
-    }
+    };
 
     return () => {
       if (pingIntervalRef.current != null) {
@@ -260,66 +265,81 @@ function App() {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
   const handleSend = () => {
     if (!chatMessage.trim()) return;
-    wsRef.current?.send(JSON.stringify({
-      type: "public_message",
-      data: { username: username.trim(), message: chatMessage }
-    }));
+    wsRef.current?.send(
+      JSON.stringify({
+        type: "public_message",
+        data: { username: username.trim(), message: chatMessage },
+      })
+    );
     setChatMessage("");
   };
 
   return (
     <div className="relative w-screen h-screen">
       <TrainProvider>
-        <PassengerProvider maxPassengers={20}>
-          <Canvas camera={{ position: [0, 18, 5] }} shadows>
-            <Suspense>
-              <Physics gravity={[0, -20, 0]} colliders="cuboid" debug={false}>
-                {coalPositions.generatedPositions.map((pos, index) => (
-                  <Coal
-                    key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                    id={index}
-                    position={pos}
-                    dimensions={[1, 1, 1]}
-                    onCollect={handleCoalCollected}
+        <PassengerProvider>
+          <CollectibleProvider>
+            <Canvas camera={{ position: [0, 18, 5] }} shadows>
+              <Suspense>
+                <Physics gravity={[0, -20, 0]} colliders="cuboid" debug={false}>
+                  {coalPositions.generatedPositions.map((pos, index) => (
+                    <Coal
+                      key={`Coal-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                      id={index}
+                      position={pos}
+                      dimensions={[1, 1, 1]}
+                    />
+                  ))}
+                  {railsPositions.generatedPositions.map((pos, index) => (
+                    <Rails
+                      key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
+                      id={index}
+                      position={pos}
+                      // dimensions={[2.5, 2.5, 0.5]}
+                      onCollect={handleRailsCollected}
+                    />
+                  ))}
+                  <Train />
+                  <GameMap />
+                  <ambientLight intensity={0.3} color="white" />
+                  <directionalLight
+                    castShadow
+                    position={[10, 10, 10]}
+                    intensity={2}
+                    shadow-mapSize-width={1024}
+                    shadow-mapSize-height={1024}
                   />
-                ))}
-                {railsPositions.generatedPositions.map((pos, index) => (
-                  <Rails
-                    key={`Rails-${pos[0]}-${pos[1]}-${pos[2]}-${index}`}
-                    id={index}
-                    position={pos}
-                    // dimensions={[2.5, 2.5, 0.5]}
-                    onCollect={handleRailsCollected}
-                  />
-                ))}
-                <Train />
-                <GameMap />
-                <ambientLight intensity={0.3} color="white" />
-                <directionalLight
-                  castShadow
-                  position={[10, 10, 10]}
-                  intensity={2}
-                  shadow-mapSize-width={1024}
-                  shadow-mapSize-height={1024}
-                />
-              </Physics>
-            </Suspense>
-          </Canvas>
-          <UI coalCollected={coalCollected} railsCollected={railsCollected} />
+                </Physics>
+              </Suspense>
+            </Canvas>
+            <UI railsCollected={railsCollected} />
+          </CollectibleProvider>
         </PassengerProvider>
       </TrainProvider>
-      <div id="notification-parent" className={`absolute top-4 px-4 w-full z-5000`}>
-        <div id="disconnected-message" className={`bg-gradient-to-b from-red-900/80 to-red-950/80 backdrop-blur-sm rounded-lg p-3 text-white shadow-lg text-center comic-text transition-opacity ease-out duration-750 ${isConnected ? "opacity-0" : "opacity-100"}`}>
+      <div
+        id="notification-parent"
+        className={`absolute  top-46 px-4 w-85 z-1`}
+      >
+        <div
+          id="disconnected-message"
+          className={`bg-gradient-to-b from-gray-900/80 to-gray-950/80 backdrop-blur-sm rounded-lg p-3 text-white shadow-lg text-center comic-text transition-opacity ease-out duration-750 ${
+            isConnected ? "opacity-0" : "opacity-100"
+          }`}
+        >
           You have been Disconnected.
         </div>
       </div>
-      <div id="user_info_holder" className="absolute bottom-5 left-5 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg">
+      <div
+        id="user_info_holder"
+        className="absolute bottom-2 left-40 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
+      >
         <a
           href="https://discord.com/oauth2/authorize?client_id=1394155656214347806&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fdiscord%2Flogin&scope=email+identify"
           className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
@@ -329,7 +349,7 @@ function App() {
       </div>
       <div
         id="public_chat"
-        className="absolute bottom-5 right-5 z-10 w-160 h-80 rounded-lg p-3 text-white
+        className="absolute bottom-5 right-5 z-10 w-120 h-70 rounded-lg p-3 text-white
                    bg-gradient-to-t from-gray-900/70 to-gray-900/20 backdrop-blur-sm shadow-lg
                    flex flex-col comic-text"
       >
@@ -359,9 +379,17 @@ function App() {
           {messages.map((m, i) => {
             const baseClass = "whitespace-pre-wrap break-words text-sm pl-2";
             if (i % 2 === 0) {
-              return (<p key={i} className={`${baseClass} bg-black/40`}>{m}</p>)
+              return (
+                <p key={i} className={`${baseClass} bg-black/40`}>
+                  {m}
+                </p>
+              );
             } else {
-              return (<p key={i} className={`${baseClass} bg-black/20`}>{m}</p>)
+              return (
+                <p key={i} className={`${baseClass} bg-black/20`}>
+                  {m}
+                </p>
+              );
             }
           })}
         </div>
@@ -373,9 +401,10 @@ function App() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           maxLength={20}
-          className={`mt-2 w-full rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`mt-2 w-full rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${
+            !isConnected ? "opacity-50 cursor-not-allowed" : ""
+          }`}
           disabled={!isConnected}
-
         />
         <div className="mt-2 flex gap-2">
           <input
@@ -386,12 +415,19 @@ function App() {
             onChange={(e) => setChatMessage(e.target.value)}
             maxLength={140}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className={`flex-1 rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${!isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={!isConnected}
+            className={`flex-1 rounded bg-white/10 border border-white/20 px-2 py-1 placeholder-white/60 ${
+              !isConnected ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           />
           <button
             id="public_chat_send"
-            className={`rounded bg-blue-500/80 hover:bg-blue-500 px-3 text-white ${username.trim() === "" || chatMessage.trim() === "" || !isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`rounded bg-blue-500/80 hover:bg-blue-500 px-3 text-white ${
+              username.trim() === "" ||
+              chatMessage.trim() === "" ||
+              !isConnected
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
             disabled={!username.trim() || !chatMessage.trim() || !isConnected}
             onClick={handleSend}
           >
@@ -400,7 +436,7 @@ function App() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default App;

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { type XYZ } from "../types/XYZ";
+import { type XYZ } from "../types/XYZ.js";
 
 export type Range = [number, number];
 type GenerationProps = {
@@ -44,7 +44,7 @@ export const useRandomlyGeneratedPositions = ({
     setGeneratedPositions(
       generateRandomPositions({ numPositions, xRange, yRange, zRange })
     );
-  }, [numPositions, xRange, yRange, zRange])
+  }, [numPositions, xRange, yRange, zRange]);
 
   return { generatedPositions, generatePositions };
 };

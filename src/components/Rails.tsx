@@ -2,7 +2,6 @@ import { RigidBody } from "@react-three/rapier";
 import { useState, useRef, useMemo } from "react";
 import type { RapierRigidBody } from "@react-three/rapier";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
 import type { XYZ } from "../types/XYZ";
 import React from "react";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -14,7 +13,7 @@ type RailProps = {
   onCollect?: (id: number) => void; //this is how you make it optional
 };
 
-function Rails({ id, position, dimensions, onCollect }: RailProps) {
+function Rails({ id, position, onCollect }: RailProps) {
   const [collected, setCollected] = useState(false);
   const rigidBodyRef = useRef<RapierRigidBody>(null);
 

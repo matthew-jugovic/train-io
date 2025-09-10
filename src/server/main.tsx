@@ -40,7 +40,7 @@ interface PlayerData {
 }
 
 
-dotenvx.config({ path: "./secrets.env" })
+dotenvx.config({ path: "./secrets.env" });
 
 const db_client = postgres(
     process.env.POSTGRES_URL!,
@@ -51,66 +51,84 @@ const db_client = postgres(
 
 const db = drizzle(db_client)
 
-const visit_count_result = await db.select().from(KeyValuePair).where(eq(KeyValuePair.key, "visit_count"))
+const visit_count_result = await db
+  .select()
+  .from(KeyValuePair)
+  .where(eq(KeyValuePair.key, "visit_count"));
 if (visit_count_result.length === 0) {
-    await db.insert(KeyValuePair).values({
-        key: "visit_count",
-        value: "0"
-    })
+  await db.insert(KeyValuePair).values({
+    key: "visit_count",
+    value: "0",
+  });
 }
 
 const ServerApp = new Hono()
 const connected_ws_clients = new Map<WSContext<WebSocket>, PlayerData>()
 
-const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app: ServerApp })
+const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({
+  app: ServerApp,
+});
 
-ServerApp.use("*", cors()
-).get("/visit", async (c) => {
-    const result = await db.select().from(KeyValuePair).where(eq(KeyValuePair.key, "visit_count"))
-    const visit_count = result.length > 0 ? parseInt(result[0].value) : 0
-    return c.json({ visit_count })
+ServerApp.use("*", cors())
+  .get("/visit", async (c) => {
+    const result = await db
+      .select()
+      .from(KeyValuePair)
+      .where(eq(KeyValuePair.key, "visit_count"));
+    const visit_count = result.length > 0 ? parseInt(result[0].value) : 0;
+    return c.json({ visit_count });
+  })
+  .post("/visit", async (c) => {
+    const result = await db
+      .update(KeyValuePair)
+      .set({
+        value: sql`CAST(COALESCE(${KeyValuePair.value}, '0') AS INTEGER) + 1`,
+      })
+      .where(eq(KeyValuePair.key, "visit_count"))
+      .returning({ value: KeyValuePair.value });
 
-}).post("/visit", async (c) => {
-    const result = await db.update(KeyValuePair)
-        .set({
-            value: sql`CAST(COALESCE(${KeyValuePair.value}, '0') AS INTEGER) + 1`
-        })
-        .where(eq(KeyValuePair.key, "visit_count"))
-        .returning({ value: KeyValuePair.value })
-
-    const visit_count = parseInt(result[0].value)
-    return c.json({ visit_count })
-
-}).get("/public_chat_log", async (c) => {
+    const visit_count = parseInt(result[0].value);
+    return c.json({ visit_count });
+  })
+  .get("/public_chat_log", async (c) => {
     // Get up to the last 5 messages from the chat log
-    console.log("Fetching public chat log")
-    const chatLog = await db.select().from(ChatLog).where(eq(ChatLog.is_deleted, false)).orderBy(sql`${ChatLog.timestamp} DESC`).limit(5)
-    return c.json(chatLog.reverse()) // Reverse to show the oldest messages first
-}).post("/auth/discord/login", async (c) => {
+    console.log("Fetching public chat log");
+    const chatLog = await db
+      .select()
+      .from(ChatLog)
+      .where(eq(ChatLog.is_deleted, false))
+      .orderBy(sql`${ChatLog.timestamp} DESC`)
+      .limit(5);
+    return c.json(chatLog.reverse()); // Reverse to show the oldest messages first
+  })
+  .post("/auth/discord/login", async (c) => {
     // Get code from JSON body
-    const data = await c.req.json()
-    const gotCode = data.auth as string
-    console.log(`Got code ${gotCode}.`)
+    const data = await c.req.json();
+    const gotCode = data.auth as string;
+    console.log(`Got code ${gotCode}.`);
 
     const params = new URLSearchParams({
-        client_id: process.env.DISCORD_APPLICATION_ID || '',
-        client_secret: process.env.DISCORD_SECRET || '',
-        grant_type: "authorization_code",
-        code: gotCode,
-        redirect_uri: "http://localhost:5173/auth/discord/login"
-    })
+      client_id: process.env.DISCORD_APPLICATION_ID || "",
+      client_secret: process.env.DISCORD_SECRET || "",
+      grant_type: "authorization_code",
+      code: gotCode,
+      redirect_uri: "http://localhost:5173/auth/discord/login",
+    });
 
-    const discordResponse = await fetch("https://discord.com/api/oauth2/token", {
+    const discordResponse = await fetch(
+      "https://discord.com/api/oauth2/token",
+      {
         method: "POST",
         body: params.toString(),
         headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-    })
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
 
     if (!discordResponse.ok) {
-        console.log(await discordResponse.json())
-        return c.notFound()
+      console.log(await discordResponse.json());
+      return c.notFound();
     }
 
     const tokenData = await discordResponse.json() as DiscordToken
@@ -124,8 +142,8 @@ ServerApp.use("*", cors()
 
 
 
-.get(
-    '/ws',
+  .get(
+    "/ws",
     upgradeWebSocket(() => {
 
 
@@ -171,17 +189,19 @@ ServerApp.use("*", cors()
                     publicMessageObject.data.username = publicMessageObject.data.username.trim().slice(0, 20)
                     publicMessageObject.data.message = publicMessageObject.data.message.trim().slice(0, 140)
 
-                    if (publicMessageObject.data.username.trim() === "") {
-                        publicMessageObject.data.username = "Anonymous"
-                    }
+            if (publicMessageObject.data.username.trim() === "") {
+              publicMessageObject.data.username = "Anonymous";
+            }
 
-                    db.insert(ChatLog).values({
-                        username: publicMessageObject.data.username,
-                        message: publicMessageObject.data.message,
-                        is_deleted: false
-                    }).catch(err => {
-                        console.error("Error inserting chat log:", err)
-                    })
+            db.insert(ChatLog)
+              .values({
+                username: publicMessageObject.data.username,
+                message: publicMessageObject.data.message,
+                is_deleted: false,
+              })
+              .catch((err) => {
+                console.error("Error inserting chat log:", err);
+              });
 
                     connected_ws_clients.forEach((clientPlayerData, clientWs) => {
                         if (clientWs.readyState === WebSocket.OPEN) {
@@ -214,23 +234,23 @@ ServerApp.use("*", cors()
             }
         }
     })
-)
-
-
+  );
 
 const server = serve({
-    fetch: ServerApp.fetch,
-    port: LOCAL_WEBSERVER_PORT,
-})
-injectWebSocket(server)
+  fetch: ServerApp.fetch,
+  port: LOCAL_WEBSERVER_PORT,
+});
+injectWebSocket(server);
 
-server.on('listening',
-    () => {
-        const address = server.address()
-        const port = typeof address === 'string' ? address : address?.port
-        console.log(`Server is running at ${typeof address === 'string' ? address : address?.address}:${port}`)
-    }
-)
+server.on("listening", () => {
+  const address = server.address();
+  const port = typeof address === "string" ? address : address?.port;
+  console.log(
+    `Server is running at ${
+      typeof address === "string" ? address : address?.address
+    }:${port}`
+  );
+});
 
 // server loop
 setInterval(() => {
@@ -252,15 +272,13 @@ setInterval(() => {
 
 // Broadcast object to all connected clients
 function broadcast(data: DataObject) {
-    connected_ws_clients.forEach((clientID, ws) => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(data))
-        }
-        void clientID;
-    });
+  connected_ws_clients.forEach((clientID, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    }
+    void clientID;
+  });
 }
-
-
 
 // graceful shutdown
 process.on('SIGINT', async () => {

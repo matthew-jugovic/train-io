@@ -1,12 +1,11 @@
 import { useGLTF } from "@react-three/drei";
 import { RigidBody, RapierRigidBody } from "@react-three/rapier";
 import { useMemo, useRef, type JSX } from "react";
-import { Euler, Object3D, Quaternion, Vector3 } from "three";
+import { Object3D } from "three";
 import Station from "./Station";
 
 export default function GameMap() {
   const { scene } = useGLTF("/map.glb");
-
   const { trees, stations } = useMemo(() => {
     const trees: JSX.Element[] = [];
     const stations: JSX.Element[] = [];
@@ -16,7 +15,7 @@ export default function GameMap() {
         trees.push(<Tree key={child.uuid} treeMesh={child} />);
       }
 
-      if (child.name.startsWith("Station")) {
+      if (child.name.endsWith("Station")) {
         stations.push(<Station key={child.uuid} stationMesh={child} />);
       }
     });
@@ -26,7 +25,7 @@ export default function GameMap() {
 
   return (
     <>
-      <RigidBody type="fixed" colliders="hull">
+      <RigidBody type="fixed" colliders="trimesh">
         <primitive object={scene} position={[0, 0, 0]} />
       </RigidBody>
 

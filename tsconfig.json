@@ -1,6 +1,7 @@
 {
   "files": [],
   "compilerOptions": {
+    "skipLibCheck": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
@@ -9,7 +10,7 @@
     "moduleResolution": "nodenext",
     "target": "es2022",
     "strict": true,
-    "declaration": true,
+    "declaration": true
   },
   "references": [
     {
@@ -19,12 +20,9 @@
       "path": "./tsconfig.node.json"
     }
   ],
-  "include": [
-    "./src/**/*.ts",
-    "drizzle.config.ts"
-  ],
+  "include": ["./src/**/*.ts"],
   "ts-node": {
     "esm": true,
     "transpileOnly": true
-  },
+  }
 }

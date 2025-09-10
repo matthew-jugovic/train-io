@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { RigidBody, RapierRigidBody } from "@react-three/rapier";
 import { Euler, Object3D, Quaternion, Vector3 } from "three";
 import { PassengerContext } from "../contexts/passengerContext";
@@ -10,9 +10,14 @@ type StationProps = {
 export default function Station({ stationMesh }: StationProps) {
   const passengerManager = useContext(PassengerContext);
   if (!passengerManager) return null;
-  const { passengers, maxPassengers, addPassengers } = passengerManager;
+  const { addPassenger, registerStation, deliverPassengers } = passengerManager;
+
   const zoneRef = useRef<RapierRigidBody>(null);
   const [insideZone, setInsideZone] = useState(false);
+
+  useEffect(() => {
+    registerStation(stationMesh.name);
+  }, [stationMesh.name, registerStation]);
 
   const forwardOffset = new Vector3(0, 0, -10);
   const stationPos = new Vector3();
@@ -29,13 +34,11 @@ export default function Station({ stationMesh }: StationProps) {
     if (!insideZone) return;
 
     const interval = setInterval(() => {
-      if (passengers < maxPassengers) {
-        addPassengers(1);
-      }
-    }, 200);
+      addPassenger(stationMesh.name);
+    }, 100);
 
     return () => clearInterval(interval);
-  }, [insideZone, passengers, maxPassengers, addPassengers]);
+  }, [insideZone, addPassenger, stationMesh.name]);
 
   return (
     <>
@@ -52,6 +55,7 @@ export default function Station({ stationMesh }: StationProps) {
 
           if (other.rigidBodyObject?.name === "train") {
             console.log("Train entered station zone:", stationMesh.name);
+            deliverPassengers(stationMesh.name);
             setInsideZone(true);
           }
         }}
