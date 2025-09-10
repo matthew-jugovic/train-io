@@ -3,8 +3,8 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import * as dotenvx from "@dotenvx/dotenvx"
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import { ChatLog, KeyValuePair } from './database/Schema.ts'
 import { eq, sql } from 'drizzle-orm'
 import { createNodeWebSocket } from '@hono/node-ws'
@@ -13,16 +13,43 @@ import type { WSContext } from 'hono/ws'
 import type { DataObject } from '../client_server_share/Interfaces.tsx'
 
 const LOCAL_WEBSERVER_PORT = 3000
-const POSTGRES_SERVER = "localhost:4000" 
+
+interface DiscordToken {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token: string;
+    scope: string;
+}
+
+interface DiscordUser {
+    id: string;
+    username: string;
+    discriminator: string;
+    avatar?: string | null;
+    global_name?: string | null;
+    mfa_enabled: boolean;
+    email?: string | null;
+    // Add other fields as needed
+}
+
+interface PlayerData {
+    uuid: UUID;
+    last_update: Date;
+    discord_obj?: DiscordUser;
+}
 
 
 dotenvx.config({ path: "./secrets.env" })
 
-const pool = new Pool({
-    connectionString: `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${POSTGRES_SERVER}/${process.env.POSTGRES_DB}`
-})
+const db_client = postgres(
+    process.env.POSTGRES_URL!,
+    {
+        prepare: false
+    }
+)
 
-const db = drizzle(pool);
+const db = drizzle(db_client)
 
 const visit_count_result = await db.select().from(KeyValuePair).where(eq(KeyValuePair.key, "visit_count"))
 if (visit_count_result.length === 0) {
@@ -33,7 +60,7 @@ if (visit_count_result.length === 0) {
 }
 
 const ServerApp = new Hono()
-const connected_ws_clients = new Map<WSContext<WebSocket>, UUID>()
+const connected_ws_clients = new Map<WSContext<WebSocket>, PlayerData>()
 
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app: ServerApp })
 
@@ -86,13 +113,13 @@ ServerApp.use("*", cors()
         return c.notFound()
     }
 
-    const tokenData = await discordResponse.json()
+    const tokenData = await discordResponse.json() as DiscordToken
     const discordAccessToken = tokenData.access_token as string
 
     console.log(tokenData)
-    const output = await (await fetch("https://discord.com/api/v10/users/@me", {headers: {"Authorization": `Bearer ${discordAccessToken}`}})).json() 
-    console.log(output)
-    return c.json({username: output.username})
+    const discordUser = await (await fetch("https://discord.com/api/v10/users/@me", {headers: {"Authorization": `Bearer ${discordAccessToken}`}})).json() as DiscordUser
+    console.log(discordUser)
+    return c.json({username: discordUser.username, token: tokenData.access_token})
 })
 
 
@@ -105,7 +132,11 @@ ServerApp.use("*", cors()
         return {
             onOpen: (evt, ws) => {
                 const clientID = randomUUID()
-                connected_ws_clients.set(ws, clientID)
+                const discordObj = {
+                    uuid: clientID,
+                    last_update: new Date(),
+                } as PlayerData
+                connected_ws_clients.set(ws, discordObj)
 
                 console.log("WebSocket connection opened.")
                 broadcast({
@@ -152,7 +183,7 @@ ServerApp.use("*", cors()
                         console.error("Error inserting chat log:", err)
                     })
 
-                    connected_ws_clients.forEach((clientID, clientWs) => {
+                    connected_ws_clients.forEach((clientPlayerData, clientWs) => {
                         if (clientWs.readyState === WebSocket.OPEN) {
                             clientWs.send(JSON.stringify({
                                 type: "public_message",
@@ -170,6 +201,15 @@ ServerApp.use("*", cors()
                         data: { t0: data.data.t0 }
                     }
                     ws.send(JSON.stringify(pongObject))
+                } else if (data.type === "discord_auth") {
+                    console.log(`Received discord reset token: ${data.data.token}`)
+                    //const playerData = connected_ws_clients.get(ws)
+                } else if (data.type === "heartbeat") {
+                    const playerData = connected_ws_clients.get(ws)
+                    if (playerData) {
+                        playerData.last_update = new Date()
+                        connected_ws_clients.set(ws, playerData)
+                    }
                 }
             }
         }
@@ -194,12 +234,19 @@ server.on('listening',
 
 // server loop
 setInterval(() => {
-    connected_ws_clients.forEach((clientID, ws) => {
+    const now = new Date()
+    connected_ws_clients.forEach((clientPlayerData, ws) => {
         if (ws.readyState === WebSocket.OPEN) {
+            const data_object: DataObject = { type: "heartbeat" }
+            ws.send(JSON.stringify(data_object))
 
-            ws.send(JSON.stringify({ type: "heartbeat", data: null }))
+            // Did the client respond in the last 10 seconds?
+            if (now.getTime() - clientPlayerData.last_update.getTime() > 10000) {
+                ws.close()
+                console.log(`Client ${clientPlayerData.uuid} timed out.`)
+            }
         }
-        void clientID;
+        void clientPlayerData;
     })
 }, 3000)
 
@@ -219,7 +266,7 @@ function broadcast(data: DataObject) {
 process.on('SIGINT', async () => {
     console.log("Server shut down.")
     server.close()
-    await pool.end().then(() => {
+    await db_client.end().then(() => {
         console.log("Database connection closed.")
     }).catch(err => {
         console.error("Error closing database connection:", err)

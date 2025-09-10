@@ -25,7 +25,8 @@ function App() {
   const [railsCollected, setRailsCollected] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [discordToken, setDiscordToken] = useState<string | null>(null);
-  const [discordUser, setDiscordUser] = useState<{ id: string; username: string } | null>(null);
+  const [discordResetToken, setDiscordResetToken] = useState<string | null>(null);
+  const [discordLogin, setDiscordLogin] = useState<boolean>(false);
 
   const [username, setUsername] = useState("");
   const [chatMessage, setChatMessage] = useState("");
@@ -130,8 +131,13 @@ function App() {
               throw new Error("Failed to authenticate with Discord");
             }
 
+            // We got the discord token.
             const data = await response.json();
-            setUsername(data.username || "Anonymous");
+            
+            setDiscordToken(data.access_token)
+            setDiscordResetToken(data.refresh_token)
+            setUsername(data.username)
+
           } catch (error) {
             console.error("Discord authentication error:", error);
           }
@@ -160,6 +166,14 @@ function App() {
         const t0 = performance.now();
         inFlightPingStartedAtRef.current = t0;
         ws.send(JSON.stringify({ type: "ping", data: { t0 } }));
+
+        // If we have the discord token, send it to server for this session
+        if (discordToken && !discordLogin) {
+          ws.send(JSON.stringify({ type: "discord_auth", data: { access_token: discordToken, reset_token: discordToken }} as DataObject))
+          setDiscordLogin(true)
+        }
+
+
         // Optional safety timeout
         window.setTimeout(() => {
           if (inFlightPingStartedAtRef.current === t0 && ws.readyState === WebSocket.OPEN) {
@@ -168,6 +182,13 @@ function App() {
           }
         }, 10000);
       }, 5000);
+
+      
+      
+
+      
+
+
     };
 
     ws.onmessage = (event) => {
@@ -198,6 +219,11 @@ function App() {
         }
         case "update_player_count": {
           setPlayersConnected(data.data.newCount);
+          break;
+        }
+        case "heartbeat": {
+          const data_object: DataObject = { type: "heartbeat" };
+          ws.send(JSON.stringify(data_object));
           break;
         }
         default:
