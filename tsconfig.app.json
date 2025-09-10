@@ -26,5 +26,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["drizzle.config.ts"]
+  "include": ["src/**/*", "drizzle.config.ts"]
 }

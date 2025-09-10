@@ -13,5 +13,8 @@ export default defineConfig({
     watch: {
       ignored: ["**/src/server/**"],
     },
-  },
+    allowedHosts: [
+      "train-ga.me"
+    ]
+  }
 });

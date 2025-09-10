@@ -12,7 +12,7 @@ import { randomUUID, type UUID } from 'crypto'
 import type { WSContext } from 'hono/ws'
 import type { DataObject } from '../client_server_share/Interfaces.tsx'
 
-const LOCAL_WEBSERVER_PORT = 3000
+const LOCAL_WEBSERVER_PORT = 5172
 
 interface DiscordToken {
     access_token: string;
@@ -40,7 +40,7 @@ interface PlayerData {
 }
 
 
-dotenvx.config({ path: "./secrets.env" });
+dotenvx.config({ path: "./.env.local" })
 
 const db_client = postgres(
     process.env.POSTGRES_URL!,
@@ -112,7 +112,7 @@ ServerApp.use("*", cors())
       client_secret: process.env.DISCORD_SECRET || "",
       grant_type: "authorization_code",
       code: gotCode,
-      redirect_uri: "http://localhost:5173/auth/discord/login",
+      redirect_uri: process.env.DISCORD_REDIRECT_URI!,
     });
 
     const discordResponse = await fetch(

@@ -10,7 +10,7 @@
     "moduleResolution": "nodenext",
     "target": "es2022",
     "strict": true,
-    "declaration": true
+    "declaration": true,
   },
   "references": [
     {

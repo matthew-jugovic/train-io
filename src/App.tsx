@@ -98,7 +98,7 @@ function App() {
   useEffect(() => {
     if (!hasVisited.current) {
       hasVisited.current = true;
-      fetch("http://localhost:3000/visit", {
+      fetch(`${import.meta.env.VITE_SERVER_URL}/visit`, {
         method: "POST",
       })
         .then((res) => res.json())
@@ -107,7 +107,7 @@ function App() {
         });
 
       // Load last five messages into React state
-      fetch("http://localhost:3000/public_chat_log")
+      fetch(`${import.meta.env.VITE_SERVER_URL}/public_chat_log`)
         .then((res) => res.json())
         .then((data: { username: string; message: string }[]) => {
           console.log("Fetched chat log:", data);
@@ -125,7 +125,7 @@ function App() {
         if (code) {
           try {
             const response = await fetch(
-              "http://localhost:3000/auth/discord/login",
+              `${import.meta.env.VITE_SERVER_URL}/auth/discord/login`,
               {
                 method: "POST",
                 headers: {
@@ -157,7 +157,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3000/ws");
+    const ws = new WebSocket(`${import.meta.env.VITE_SERVER_URL}/ws`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -341,7 +341,7 @@ function App() {
         className="absolute bottom-2 left-40 bg-gradient-to-t from-gray-900/70 to-gray-900/20 p-3 shadow-lg rounded-lg"
       >
         <a
-          href="https://discord.com/oauth2/authorize?client_id=1394155656214347806&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fdiscord%2Flogin&scope=email+identify"
+          href={import.meta.env.VITE_DISCORD_REDIRECT_URL}
           className="bg-blue-500/80 hover:bg-blue-500 px-3 py-2 rounded text-white comic-text"
         >
           Login with Discord
